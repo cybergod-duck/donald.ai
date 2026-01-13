@@ -1,0 +1,16 @@
+{
+  "type": "module",
+  "engines": {
+    "node": ">=20.x"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "start": "node server.js"
+  }
+}
