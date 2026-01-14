@@ -15,7 +15,12 @@
             pointer-events: none;
         }
         
-        #load-bar { position: absolute; top: 0; left: 0; width: 0%; height: 4px; background: #0f0; box-shadow: 0 0 10px #0f0; transition: width 0.3s; z-index: 100; }
+        #load-bar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60%; height: 8px; background: rgba(0, 255, 0, 0.2); border: 2px solid #0f0; z-index: 100; display: none; }
+        #load-bar.active { display: block; }
+        #load-progress { height: 100%; background: #0f0; width: 0%; transition: width 0.3s; box-shadow: 0 0 20px #0f0; }
+        #load-text { position: absolute; top: calc(50% + 30px); left: 50%; transform: translateX(-50%); color: #0f0; font-size: 1rem; z-index: 100; display: none; text-shadow: 0 0 10px #0f0; }
+        #load-text.active { display: block; }
+        
         #terminal { width: 800px; margin-top: 15px; border: 1px solid #0f0; padding: 10px; background: #000; cursor: text; }
         input { background: transparent; border: none; color: #0f0; width: 95%; font-size: 1.2rem; outline: none; font-family: inherit; }
         
@@ -52,14 +57,17 @@
         .flash-transition { animation: flash-white 0.4s ease-out; }
     </style>
 </head>
-<body onclick="startAmbient();">
+<body>
     <div id="title">
         <h1>Donald.AI</h1>
         <p>Have Trump give you a speech about anything you want</p>
     </div>
     <div id="frame">
-        <div id="load-bar"></div>
-        <video id="visual" src="/6.mp4" muted autoplay loop playsinline></video>
+        <div id="load-bar">
+            <div id="load-progress"></div>
+        </div>
+        <div id="load-text">GENERATING SPEECH...</div>
+        <video id="visual" src="/idle.mp4" muted autoplay loop playsinline></video>
     </div>
     <div id="terminal">
         <span>> </span><input type="text" id="cmd" placeholder="ASK TRUMP ANYTHING..." autocomplete="off">
@@ -67,7 +75,7 @@
     
     <button id="random-btn">🎲 RANDOM SPEECH</button>
 
-    <audio id="ambient" loop>
+    <audio id="ambient" loop autoplay>
         <source src="/drone.mp3" type="audio/mpeg">
     </audio>
     
@@ -78,12 +86,13 @@
     <script>
         const input = document.getElementById('cmd');
         const visual = document.getElementById('visual');
-        const bar = document.getElementById('load-bar');
+        const loadBar = document.getElementById('load-bar');
+        const loadProgress = document.getElementById('load-progress');
+        const loadText = document.getElementById('load-text');
         const ambient = document.getElementById('ambient');
         const clickSound = document.getElementById('click-sound');
         const randomBtn = document.getElementById('random-btn');
         
-        let ambientStarted = false;
         let isIdle = true;
         let audioContext = null;
         let analyser = null;
@@ -100,15 +109,16 @@
             "Talk about being a winner"
         ];
 
-        input.focus();
-        
-        function startAmbient() {
-            if (!ambientStarted) {
-                ambient.volume = 0.3;
+        // Start ambient immediately on page load
+        ambient.volume = 0.3;
+        ambient.play().catch(() => {
+            // If autoplay blocked, play on first user interaction
+            document.body.addEventListener('click', () => {
                 ambient.play().catch(() => {});
-                ambientStarted = true;
-            }
-        }
+            }, { once: true });
+        });
+
+        input.focus();
         
         // Random speech button
         randomBtn.addEventListener('click', () => {
@@ -124,7 +134,7 @@
             }, 100);
         });
         
-        // Create Web Audio API with soft echo using delay
+        // Create Web Audio API with soft echo
         function createAudioWithEcho(audioElement) {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -140,17 +150,15 @@
             analyser.fftSize = 128;
             analyser.smoothingTimeConstant = 0.8;
             
-            // Soft echo settings
-            delay.delayTime.value = 0.25; // 250ms delay (soft echo)
-            feedback.gain.value = 0.2; // Low feedback for subtle repeat
-            wetGain.gain.value = 0.2; // 20% echo
-            dryGain.gain.value = 0.9; // 90% dry signal
+            delay.delayTime.value = 0.25;
+            feedback.gain.value = 0.2;
+            wetGain.gain.value = 0.2;
+            dryGain.gain.value = 0.9;
             
-            // Routing: source -> dry + echo path
             source.connect(dryGain);
             source.connect(delay);
             delay.connect(feedback);
-            feedback.connect(delay); // Feedback loop
+            feedback.connect(delay);
             delay.connect(wetGain);
             
             dryGain.connect(analyser);
@@ -168,36 +176,52 @@
         };
         
         async function processPrompt() {
-            startAmbient();
-            
             const prompt = input.value.trim();
             if (!prompt) return;
 
             isIdle = false;
             
             input.value = "";
-            input.style.opacity = "0.3";
-            bar.style.width = "30%";
+            input.disabled = true;
+            
+            // Show progress bar
+            loadBar.classList.add('active');
+            loadText.classList.add('active');
+            loadProgress.style.width = '10%';
             
             visual.classList.add('flash-transition');
             setTimeout(() => visual.classList.remove('flash-transition'), 400);
 
             try {
+                loadProgress.style.width = '30%';
+                
                 const res = await fetch('/api/generate', { 
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify({ prompt }) 
                 });
                 
+                loadProgress.style.width = '60%';
+                
                 if (!res.ok) throw new Error('API failed');
                 
                 const blob = await res.blob();
+                loadProgress.style.width = '90%';
+                
                 const audio = new Audio(URL.createObjectURL(blob));
                 
                 createAudioWithEcho(audio);
 
+                audio.onloadeddata = () => {
+                    loadProgress.style.width = '100%';
+                    setTimeout(() => {
+                        loadBar.classList.remove('active');
+                        loadText.classList.remove('active');
+                        loadProgress.style.width = '0%';
+                    }, 300);
+                };
+
                 audio.onplay = () => {
-                    bar.style.width = "0%";
                     ambient.volume = 0.1;
                     
                     const dataArray = new Uint8Array(analyser.frequencyBinCount);
@@ -253,12 +277,12 @@
                         isIdle = true;
                         ambient.volume = 0.3;
                         
-                        visual.src = "/6.mp4";
+                        visual.src = "/idle.mp4";
                         visual.loop = true;
                         visual.style.filter = '';
                         visual.load();
                         visual.play().catch(() => {});
-                        input.style.opacity = "1";
+                        input.disabled = false;
                         input.focus();
                     };
                 };
@@ -270,13 +294,15 @@
                 alert("CONNECTION ERROR");
                 isIdle = true;
                 ambient.volume = 0.3;
-                visual.src = "/6.mp4";
+                loadBar.classList.remove('active');
+                loadText.classList.remove('active');
+                loadProgress.style.width = '0%';
+                visual.src = "/idle.mp4";
                 visual.loop = true;
                 visual.style.filter = '';
                 visual.load();
                 visual.play().catch(() => {});
-                input.style.opacity = "1";
-                bar.style.width = "0%";
+                input.disabled = false;
                 input.focus();
             }
         }
