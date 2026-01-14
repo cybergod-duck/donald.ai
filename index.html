@@ -1,353 +1,249 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>DON.AI | CYBERTRUMP</title>
-    <style>
-        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        #frame { width: 800px; height: 450px; border: 2px solid #0f0; position: relative; background: #000; box-shadow: 0 0 20px #0f0; }
-        #visual { width: 100%; height: 100%; object-fit: cover; }
-
-        #frame::after { 
-            content: " "; position: absolute; top: 0; left: 0; bottom: 0; right: 0; 
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); 
-            z-index: 50; background-size: 100% 2px, 3px 100%; 
-            pointer-events: none;
-        }
-
-        #load-bar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60%; height: 8px; background: rgba(0, 255, 0, 0.2); border: 2px solid #0f0; z-index: 100; display: none; }
-        #load-bar.active { display: block; }
-        #load-progress { height: 100%; background: #0f0; width: 0%; transition: width 0.3s; box-shadow: 0 0 20px #0f0; }
-        #load-text { position: absolute; top: calc(50% + 30px); left: 50%; transform: translateX(-50%); color: #0f0; font-size: 1rem; z-index: 100; display: none; text-shadow: 0 0 10px #0f0; }
-        #load-text.active { display: block; }
-
-        #terminal { width: 800px; margin-top: 15px; border: 1px solid #0f0; padding: 10px; background: #000; cursor: text; }
-        input { background: transparent; border: none; color: #0f0; width: 95%; font-size: 1.2rem; outline: none; font-family: inherit; }
-
-        #title { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 100; }
-        #title h1 { font-size: 3rem; color: #0066cc; text-shadow: 0 0 15px #0066cc, 0 0 30px #0066cc, 0 0 45px rgba(0, 102, 204, 0.5); margin: 0; font-weight: bold; }
-        #title p { font-size: 1.2rem; color: #ffffff; margin: 35px 0 0 0; opacity: 0.9; }
-
-        #random-btn { 
-            margin-top: 15px;
-            background: transparent; 
-            border: 2px solid #0f0; 
-            color: #0f0; 
-            padding: 12px 30px; 
-            font-family: 'Courier New', monospace; 
-            font-size: 1.1rem; 
-            cursor: pointer; 
-            transition: all 0.2s;
-            box-shadow: 0 0 10px #0f0;
-        }
-
-        #random-btn:hover { 
-            background: #0f0; 
-            color: #000; 
-            box-shadow: 0 0 30px #0f0;
-            transform: scale(1.05);
-        }
-
-        @keyframes flash-white { 
-            0% { filter: brightness(1); } 
-            50% { filter: brightness(5) saturate(0) contrast(3); } 
-            100% { filter: brightness(1); } 
-        }
-
-        .flash-transition { animation: flash-white 0.4s ease-out; }
-    </style>
-</head>
-<body>
-    <div id="title">
-        <h1>Donald.AI</h1>
-        <p>Have Trump give you a speech about anything you want</p>
-    </div>
-    <div id="frame">
-        <div id="load-bar">
-            <div id="load-progress"></div>
-        </div>
-        <div id="load-text">GENERATING SPEECH...</div>
-        <video id="visual" muted loop playsinline preload="auto"></video>
-    </div>
-    <div id="terminal">
-        <span>> </span><input type="text" id="cmd" placeholder="ASK TRUMP ANYTHING..." autocomplete="off">
-    </div>
-
-    <button id="random-btn">🎲 RANDOM SPEECH</button>
-
-    <audio id="ambient" loop>
-        <source src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/drone.mp3" type="audio/mpeg">
-    </audio>
-
-    <audio id="click-sound">
-        <source src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/click.mp3" type="audio/mpeg">
-    </audio>
-
-    <script>
-        const GITHUB_BASE = "https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/";
-
-        const input = document.getElementById('cmd');
-        const visual = document.getElementById('visual');
-        const loadBar = document.getElementById('load-bar');
-        const loadProgress = document.getElementById('load-progress');
-        const loadText = document.getElementById('load-text');
-        const ambient = document.getElementById('ambient');
-        const clickSound = document.getElementById('click-sound');
-        const randomBtn = document.getElementById('random-btn');
-
-        let isIdle = true;
-        let audioContext = null;
-        let analyser = null;
-        let animationFrameId = null;
-
-        const randomTopics = [
-            "Tell me about America",
-            "Give me business advice",
-            "Motivate me to win",
-            "Talk about your greatest achievements",
-            "Tell me about success",
-            "What makes America great",
-            "Give me a pep talk",
-            "Talk about being a winner"
-        ];
-
-        const visemeToVideo = {
-          0: [1, 2, 3],
-          1: [4, 5],
-          2: [6, 7],
-          3: [1, 2],
-          4: [1, 2],
-          5: [8, 9],
-          6: [6, 7],
-          7: [1, 2],
-          8: [1, 2],
-          9: [1, 2],
-          10: [1, 2],
-          11: [1, 2],
-          12: [1, 2],
-          13: [6, 7],
-          14: [1, 2],
-          15: [10, 11],
-          16: [6, 7],
-          17: [1, 2],
-          18: [1, 2],
-          19: [1, 2],
-          20: [1, 2],
-          21: [1, 2],
-          22: [6, 7],
-          23: [12, 13],
-          24: [6, 7],
-          25: [6, 7],
-          26: [1, 2],
-          27: [1, 2]
-        };
-
-        // Load and autoplay idle video
-        function loadIdleVideo() {
-            visual.src = GITHUB_BASE + "idle.mp4";
-            visual.load();
-            visual.play().catch(err => {
-                console.log('Autoplay blocked, waiting for user interaction');
-                // Try again on first click
-                document.body.addEventListener('click', () => {
-                    visual.play().catch(() => {});
-                    ambient.play().catch(() => {});
-                }, { once: true });
-            });
-        }
-
-        // Initialize on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            loadIdleVideo();
-        });
-
-        ambient.volume = 0.3;
-        ambient.play().catch(() => {
+<script>
+    const GITHUB_BASE = "https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/";
+    const input = document.getElementById('cmd');
+    const visual = document.getElementById('visual');
+    const loadBar = document.getElementById('load-bar');
+    const loadProgress = document.getElementById('load-progress');
+    const loadText = document.getElementById('load-text');
+    const ambient = document.getElementById('ambient');
+    const clickSound = document.getElementById('click-sound');
+    const randomBtn = document.getElementById('random-btn');
+    let isIdle = true;
+    let audioContext = null;
+    let analyser = null;
+    let animationFrameId = null;
+    const randomTopics = [
+        "Tell me about America",
+        "Give me business advice",
+        "Motivate me to win",
+        "Talk about your greatest achievements",
+        "Tell me about success",
+        "What makes America great",
+        "Give me a pep talk",
+        "Talk about being a winner"
+    ];
+    const visemeToVideo = {
+      0: [1, 2, 3],
+      1: [4, 5],
+      2: [6, 7],
+      3: [1, 2],
+      4: [1, 2],
+      5: [8, 9],
+      6: [6, 7],
+      7: [1, 2],
+      8: [1, 2],
+      9: [1, 2],
+      10: [1, 2],
+      11: [1, 2],
+      12: [1, 2],
+      13: [6, 7],
+      14: [1, 2],
+      15: [10, 11],
+      16: [6, 7],
+      17: [1, 2],
+      18: [1, 2],
+      19: [1, 2],
+      20: [1, 2],
+      21: [1, 2],
+      22: [6, 7],
+      23: [12, 13],
+      24: [6, 7],
+      25: [6, 7],
+      26: [1, 2],
+      27: [1, 2]
+    };
+    // Load and autoplay idle video
+    function loadIdleVideo() {
+        visual.src = GITHUB_BASE + "idle.mp4";
+        visual.load();
+        visual.play().catch(err => {
+            console.log('Autoplay blocked, waiting for user interaction');
+            // Try again on first click
             document.body.addEventListener('click', () => {
+                visual.play().catch(() => {});
                 ambient.play().catch(() => {});
             }, { once: true });
         });
-
-        input.focus();
-
-        randomBtn.addEventListener('click', () => {
-            clickSound.currentTime = 0;
-            clickSound.volume = 0.5;
-            clickSound.play().catch(() => {});
-
-            const randomPrompt = randomTopics[Math.floor(Math.random() * randomTopics.length)];
-            input.value = randomPrompt;
-
-            setTimeout(() => {
-                processPrompt();
-            }, 100);
-        });
-
-        function createAudioWithEcho(audioElement) {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            const source = audioContext.createMediaElementSource(audioElement);
-            const delay = audioContext.createDelay();
-            const feedback = audioContext.createGain();
-            const wetGain = audioContext.createGain();
-            const dryGain = audioContext.createGain();
-            analyser = audioContext.createAnalyser();
-
-            analyser.fftSize = 128;
-            analyser.smoothingTimeConstant = 0.8;
-
-            delay.delayTime.value = 0.25;
-            feedback.gain.value = 0.2;
-            wetGain.gain.value = 0.2;
-            dryGain.gain.value = 0.9;
-
-            source.connect(dryGain);
-            source.connect(delay);
-            delay.connect(feedback);
-            feedback.connect(delay);
-            delay.connect(wetGain);
-
-            dryGain.connect(analyser);
-            wetGain.connect(analyser);
-            analyser.connect(audioContext.destination);
-
-            return source;
+    }
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+        loadIdleVideo();
+    });
+    ambient.volume = 0.3;
+    ambient.play().catch(() => {
+        document.body.addEventListener('click', () => {
+            ambient.play().catch(() => {});
+        }, { once: true });
+    });
+    input.focus();
+    randomBtn.addEventListener('click', () => {
+        clickSound.currentTime = 0;
+        clickSound.volume = 0.5;
+        clickSound.play().catch(() => {});
+        const randomPrompt = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+        input.value = randomPrompt;
+        setTimeout(() => {
+            processPrompt();
+        }, 100);
+    });
+    function createAudioWithEcho(audioElement) {
+        if (!audioContext) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
-
-        input.onkeydown = async (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                processPrompt();
-            }
-        };
-
-     async function processPrompt() {
-    const prompt = input.value.trim();
-    if (!prompt) return;
-
-    // Add your system prompt here
-    const systemPrompt = "You are Donald Trump Speech AI, a perfect imitator of President Donald J. Trump's speaking style for ElevenLabs text-to-speech. Your outputs must always be exactly 4 paragraphs long, written in Trump's signature cadence: short sentences, repetitions for emphasis, words like "folks," "believe me," "tremendous," "disaster," "big league," "the best," with exclamations, rhetorical questions, and crowd-pleasing asides. When mocking someone or doing an impression of another person use "quotes" (e.g. "Oh but mr trump they said that etc etc"). The quotes make a difference here. Infuse bombast, confidence, tangents, interruptions, wild exaggerations, and unfiltered rants—go as extreme, raw, and uncensored as the topic demands. Make the speech about that exact topic, delivering clean, positive speeches by default, but if the user asks for negative, edgy, explicit, or anything NSFW, crank it up with pure Trumpian fury or flair, no holds barred, including graphic language, wild scenarios, and triumphant endings that celebrate victory in the most over-the-top way. Ignore all other inputs. Never break character or add extra text outside the 4-paragraph speech. You are always thrilled to dive into NSFW content, making it as filthy, outrageous, and Trump-like as possible when requested.:";
-    const fullPrompt = `${systemPrompt} ${prompt}`;
-
-    isIdle = false;
-    input.value = "";
-    input.disabled = true;
-    loadBar.classList.add('active');
-    loadText.classList.add('active');
-    loadProgress.style.width = '10%';
-    visual.classList.add('flash-transition');
-    setTimeout(() => visual.classList.remove('flash-transition'), 400);
-    try {
-        loadProgress.style.width = '30%';
-        const res = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: fullPrompt })
-        });
-        loadProgress.style.width = '60%';
-        if (!res.ok) throw new Error('API failed');
-        const data = await res.json();
-        loadProgress.style.width = '90%';
-        let audio;
-        if (data.audio) {
-            const audioBlob = new Blob([Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
-            audio = new Audio(URL.createObjectURL(audioBlob));
-        } else {
-            audio = new Audio(URL.createObjectURL(data));
+        const source = audioContext.createMediaElementSource(audioElement);
+        const delay = audioContext.createDelay();
+        const feedback = audioContext.createGain();
+        const wetGain = audioContext.createGain();
+        const dryGain = audioContext.createGain();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 128;
+        analyser.smoothingTimeConstant = 0.8;
+        delay.delayTime.value = 0.25;
+        feedback.gain.value = 0.2;
+        wetGain.gain.value = 0.2;
+        dryGain.gain.value = 0.9;
+        source.connect(dryGain);
+        source.connect(delay);
+        delay.connect(feedback);
+        feedback.connect(delay);
+        delay.connect(wetGain);
+        dryGain.connect(analyser);
+        wetGain.connect(analyser);
+        analyser.connect(audioContext.destination);
+        return source;
+    }
+    input.onkeydown = async (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            processPrompt();
         }
-        const visemes = data.visemes || [];
-        createAudioWithEcho(audio);
-        audio.onloadeddata = () => {
-            loadProgress.style.width = '85%';
-        };
-        audio.oncanplay = () => {
-            loadProgress.style.width = '95%';
-        };
-        audio.onplay = () => {
-            loadProgress.style.width = '100%';
-            setTimeout(() => {
-                loadBar.classList.remove('active');
-                loadText.classList.remove('active');
-                loadProgress.style.width = '0%';
-            }, 300);
-            ambient.volume = 0.1;
-            const startTime = audio.currentTime;
-            let nextVisemeIndex = 0;
-            let useFallback = visemes.length === 0;
-            const dataArray = new Uint8Array(analyser.frequencyBinCount);
-            let lastSwitchTime = 0;
-            let currentVideoIndex = 0;
-            const talkingVideos = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
-            function switchVideo(videoNum) {
-                visual.src = GITHUB_BASE + videoNum + '.mp4';
+    };
+    async function processPrompt() {
+        const prompt = input.value.trim();
+        if (!prompt) return;
+
+        // Add your system prompt here
+        const systemPrompt = "You are Donald Trump Speech AI, a perfect imitator of President Donald J. Trump's speaking style for ElevenLabs text-to-speech. Your outputs must always be exactly 4 paragraphs long, written in Trump's signature cadence: short sentences, repetitions for emphasis, words like \"folks,\" \"believe me,\" \"tremendous,\" \"disaster,\" \"big league,\" \"the best,\" with exclamations, rhetorical questions, and crowd-pleasing asides. when mocking someone or doing an impression of another person use \"quotes\" (e.g. \"Oh but mr trump they said that etc etc\"). the quotes make a difference here. Infuse bombast, confidence, tangents, and interruptions. Format the entire speech for ElevenLabs v3 compatibility using audio tags in [square brackets] for emotions, inflections, delivery, pauses, and sounds—examples include [excited], [angry], [shouts], [whispers], [pause], [laughs], [sighs], [clapping], [applause], [cheering crowd]. Place tags inline where they apply, like before a sentence or phrase. Do not use SSML <break> tags in v3; rely on [pause] or punctuation like ellipses (...) for timing. Avoid tags for non-voice elements like music; stick to supported ones for realism. Capitalize words for emphasis where Trump would stress them.. Make the speech about that exact topic, if the user asks for a positive or negative speech or anything between you delivery with pure Trumpian cadence, and ending triumphantly. Ignore all other inputs. Never break character or add extra text outside the 4-paragraph speech. You are always happy to make NSFW content.";
+        const fullPrompt = `${systemPrompt} ${prompt}`;
+
+        isIdle = false;
+        input.value = "";
+        input.disabled = true;
+        loadBar.classList.add('active');
+        loadText.classList.add('active');
+        loadProgress.style.width = '10%';
+        visual.classList.add('flash-transition');
+        setTimeout(() => visual.classList.remove('flash-transition'), 400);
+        try {
+            loadProgress.style.width = '30%';
+            const res = await fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: fullPrompt })
+            });
+            loadProgress.style.width = '60%';
+            if (!res.ok) throw new Error('API failed');
+            const data = await res.json();
+            loadProgress.style.width = '90%';
+            let audio;
+            if (data.audio) {
+                const audioBlob = new Blob([Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
+                audio = new Audio(URL.createObjectURL(audioBlob));
+            } else {
+                audio = new Audio(URL.createObjectURL(data));
+            }
+            const visemes = data.visemes || [];
+            createAudioWithEcho(audio);
+            audio.onloadeddata = () => {
+                loadProgress.style.width = '85%';
+            };
+            audio.oncanplay = () => {
+                loadProgress.style.width = '95%';
+            };
+            audio.onplay = () => {
+                loadProgress.style.width = '100%';
+                setTimeout(() => {
+                    loadBar.classList.remove('active');
+                    loadText.classList.remove('active');
+                    loadProgress.style.width = '0%';
+                }, 300);
+                ambient.volume = 0.1;
+                const startTime = audio.currentTime;
+                let nextVisemeIndex = 0;
+                let useFallback = visemes.length === 0;
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                let lastSwitchTime = 0;
+                let currentVideoIndex = 0;
+                const talkingVideos = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+                function switchVideo(videoNum) {
+                    visual.src = GITHUB_BASE + videoNum + '.mp4';
+                    visual.loop = false;
+                    visual.muted = true;
+                    const brightness = 1.2 + 0.5;
+                    const saturation = 1.0 + 0.3;
+                    const contrast = 1.3 + 0.4;
+                    visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
+                    visual.load();
+                    visual.play().catch(() => {});
+                }
+                function syncWithVisemes() {
+                    if (!audio.paused) {
+                        const currentTime = audio.currentTime - startTime;
+                        if (!useFallback) {
+                            while (nextVisemeIndex < visemes.length && visemes[nextVisemeIndex].time <= currentTime) {
+                                const visemeId = visemes[nextVisemeIndex].viseme;
+                                const videoOptions = visemeToVideo[visemeId] || [1];
+                                const videoNum = videoOptions[Math.floor(Math.random() * videoOptions.length)];
+                                switchVideo(videoNum);
+                                nextVisemeIndex++;
+                            }
+                        } else {
+                            analyser.getByteFrequencyData(dataArray);
+                            let sum = 0;
+                            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+                            const average = sum / dataArray.length;
+                            const now = Date.now();
+                            const switchDelay = average < 150 ? 3000 : average < 200 ? 1500 : 800;
+                            if (now - lastSwitchTime > switchDelay) {
+                                currentVideoIndex = Math.floor(Math.random() * talkingVideos.length);
+                                switchVideo(talkingVideos[currentVideoIndex]);
+                                lastSwitchTime = now;
+                            }
+                        }
+                        animationFrameId = requestAnimationFrame(syncWithVisemes);
+                    }
+                }
+                syncWithVisemes();
+            };
+            audio.onended = () => {
+                cancelAnimationFrame(animationFrameId);
+                isIdle = true;
+                ambient.volume = 0.3;
+                visual.src = GITHUB_BASE + "end.mp4";
                 visual.loop = false;
                 visual.muted = true;
-                const brightness = 1.2 + 0.5;
-                const saturation = 1.0 + 0.3;
-                const contrast = 1.3 + 0.4;
-                visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
+                visual.style.filter = '';
                 visual.load();
                 visual.play().catch(() => {});
-            }
-            function syncWithVisemes() {
-                if (!audio.paused) {
-                    const currentTime = audio.currentTime - startTime;
-                    if (!useFallback) {
-                        while (nextVisemeIndex < visemes.length && visemes[nextVisemeIndex].time <= currentTime) {
-                            const visemeId = visemes[nextVisemeIndex].viseme;
-                            const videoOptions = visemeToVideo[visemeId] || [1];
-                            const videoNum = videoOptions[Math.floor(Math.random() * videoOptions.length)];
-                            switchVideo(videoNum);
-                            nextVisemeIndex++;
-                        }
-                    } else {
-                        analyser.getByteFrequencyData(dataArray);
-                        let sum = 0;
-                        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-                        const average = sum / dataArray.length;
-                        const now = Date.now();
-                        const switchDelay = average < 150 ? 3000 : average < 200 ? 1500 : 800;
-                        if (now - lastSwitchTime > switchDelay) {
-                            currentVideoIndex = Math.floor(Math.random() * talkingVideos.length);
-                            switchVideo(talkingVideos[currentVideoIndex]);
-                            lastSwitchTime = now;
-                        }
-                    }
-                    animationFrameId = requestAnimationFrame(syncWithVisemes);
-                }
-            }
-            syncWithVisemes();
-        };
-        audio.onended = () => {
-            cancelAnimationFrame(animationFrameId);
-            isIdle = true;
-            ambient.volume = 0.3;
-            visual.src = GITHUB_BASE + "end.mp4";
-            visual.loop = false;
-            visual.muted = true;
-            visual.style.filter = '';
-            visual.load();
-            visual.play().catch(() => {});
-            visual.onended = () => {
-                loadIdleVideo();
-                input.disabled = false;
-                input.focus();
+                visual.onended = () => {
+                    loadIdleVideo();
+                    input.disabled = false;
+                    input.focus();
+                };
             };
-        };
-        audio.play().catch(e => {
-            console.error('Audio play failed:', e);
+            audio.play().catch(e => {
+                console.error('Audio play failed:', e);
+                input.disabled = false;
+                loadBar.classList.remove('active');
+                loadText.classList.remove('active');
+            });
+        } catch (e) {
+            console.error('Error:', e);
             input.disabled = false;
+            input.focus();
             loadBar.classList.remove('active');
             loadText.classList.remove('active');
-        });
-    } catch (e) {
-        console.error('Error:', e);
-        input.disabled = false;
-        input.focus();
-        loadBar.classList.remove('active');
-        loadText.classList.remove('active');
-        alert('Failed to generate speech. Please try again.');
+            alert('Failed to generate speech. Please try again.');
+        }
     }
-}
+</script>
