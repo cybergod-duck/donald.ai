@@ -6,7 +6,7 @@
     <style>
         body { background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
         #frame { width: 800px; height: 450px; border: 2px solid #0f0; position: relative; background: #000; box-shadow: 0 0 20px #0f0; }
-        #visual { width: 100%; height: 100%; object-fit: cover; }
+        #visual { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.3s ease-in-out; }
 
         #frame::after { 
             content: " "; position: absolute; top: 0; left: 0; bottom: 0; right: 0; 
@@ -159,14 +159,14 @@
             "Talk about being a winner"
         ];
 
-        // Expanded video assignments assuming 1-14 exist; distributed for more variety
-        // Adjust these numbers based on which clips best match each mouth shape
+        // Further expanded for max variety, assuming 1-14 clips from different sources/movies
+        // Overlap categories to pull from all clips more often
         const mouthShapes = {
-            wide_open: [8, 9, 10, 11, 12, 13, 14],    // More options for expressive talking
-            open: [5, 6, 7, 8, 9],
-            narrow: [3, 4, 5],
-            closed: [1, 2, 3],
-            neutral: [1, 2, 3, 4, 5, 6, 7]           // Fallback with variety
+            wide_open: [1, 4, 7, 8, 9, 10, 11, 12, 13, 14],
+            open: [2, 3, 5, 6, 7, 8, 9, 10, 11],
+            narrow: [1, 2, 3, 4, 5, 6, 12],
+            closed: [1, 2, 3, 4, 13, 14],
+            neutral: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]  // All for fallback variety
         };
 
         const systemPrompt = "You are Donald Trump. Respond in first person as if giving a speech in your characteristic style: boastful, repetitive, with tangents, and using phrases like 'believe me,' 'tremendous,' 'the best.' Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character.";
@@ -415,7 +415,6 @@
                         const midFreq = freqData.slice(8, 32).reduce((a, b) => a + b, 0) / 24;
                         const highFreq = freqData.slice(32, 64).reduce((a, b) => a + b, 0) / 32;
 
-                        // Adjusted thresholds for more frequent shape changes and variety
                         if (volume < 8) return 'closed';
                         if (lowFreq > 70 && volume > 12) return 'wide_open';
                         if (midFreq > 50 && volume > 8) return 'open';
@@ -426,6 +425,7 @@
                     }
 
                     function switchVideo(videoNum) {
+                        visual.style.opacity = 0;  // Fade out current
                         visual.src = GITHUB_BASE + videoNum + '.mp4';
                         visual.loop = false;
                         visual.muted = true;
@@ -433,8 +433,15 @@
                         const saturation = 1.3;
                         const contrast = 1.7;
                         visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
+
                         visual.load();
-                        visual.play().catch(() => {});
+
+                        visual.onloadedmetadata = () => {
+                            // Random start time to show different parts (beginning, middle, end)
+                            visual.currentTime = Math.random() * visual.duration;
+                            visual.play().catch(() => {});
+                            visual.style.opacity = 1;  // Fade in new video
+                        };
                     }
 
                     function syncLipSync() {
@@ -445,26 +452,25 @@
                             const now = Date.now();
                             const mouthShape = getSmartMouthShape(frequencyData, timeData);
 
-                            // Increased timing for smoother flow, less rapid flashing
-                            // Switch on shape change after 800ms, or force switch after 2000ms
-                            if ((mouthShape !== currentMouthShape && now - lastSwitchTime > 800) || 
-                                now - lastSwitchTime > 2000) {
+                            // Slightly lowered timings for more frequent switches without too much flashing
+                            if ((mouthShape !== currentMouthShape && now - lastSwitchTime > 500) || 
+                                now - lastSwitchTime > 1500) {
 
                                 const videoOptions = mouthShapes[mouthShape];
 
-                                // Use history to prevent immediate repeats but allow more variety
-                                let availableVideos = videoOptions.filter(v => v !== lastVideoNum);
-                                if (availableVideos.length === 0) {
+                                // Avoid immediate repeat and recent history for more variety across "movies"
+                                let availableVideos = videoOptions.filter(v => !videoHistory.includes(v));
+                                if (availableVideos.length < 2) {  // Ensure at least 2 options to avoid repetition
                                     availableVideos = videoOptions;
+                                    videoHistory = [];  // Reset history if options run low
                                 }
 
                                 const videoNum = availableVideos[Math.floor(Math.random() * availableVideos.length)];
 
                                 switchVideo(videoNum);
                                 lastVideoNum = videoNum;
-                                // Keep history but make it shorter for more rotation
                                 videoHistory.push(videoNum);
-                                if (videoHistory.length > 3) videoHistory.shift();
+                                if (videoHistory.length > 4) videoHistory.shift();  // Longer history to cycle more
                                 currentMouthShape = mouthShape;
                                 lastSwitchTime = now;
                             }
