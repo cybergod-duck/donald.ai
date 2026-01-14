@@ -63,7 +63,7 @@
                 };
                 
                 // Start glitching effect - rapidly switch videos
-                glitchInterval = setInterval(shuffle, 1800); // Change video every 150ms // Change video every 1.8s for natural talking effect
+                glitchInterval = setInterval(shuffle, 3000); // Change video every 150ms // Change video every 1.8s for natural talking effect // Switch videos every 3s to show different angles/distances
                 shuffle(); // Start immediately
                 
                 audio.onended = () => {
