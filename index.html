@@ -109,10 +109,42 @@
             "Talk about being a winner"
         ];
 
+        // Viseme to video mapping
+        // 0=neutral, 1=ae, 2=b, 3=c, 4=d, 5=e, 6=f, 7=g, 8=h, 9=i, 10=j, 11=k, 12=l, 13=m, 14=n, 15=o, 16=p, 17=q, 18=r, 19=s, 20=sh, 21=t, 22=th, 23=u, 24=v, 25=w, 26=y, 27=z
+        const visemeToVideo = {
+          0: 1,   // neutral
+          1: 1,   // ae
+          2: 2,   // b (closed lips)
+          3: 1,   // c
+          4: 1,   // d
+          5: 1,   // e (open)
+          6: 2,   // f (closed)
+          7: 1,   // g
+          8: 1,   // h
+          9: 1,   // i
+          10: 1,  // j
+          11: 1,  // k
+          12: 1,  // l
+          13: 2,  // m (closed)
+          14: 1,  // n
+          15: 3,  // o (wide open)
+          16: 2,  // p (closed)
+          17: 1,  // q
+          18: 1,  // r
+          19: 1,  // s
+          20: 1,  // sh
+          21: 1,  // t
+          22: 2,  // th
+          23: 3,  // u (open)
+          24: 2,  // v
+          25: 2,  // w
+          26: 1,  // y
+          27: 1   // z
+        };
+
         // Start ambient immediately on page load
         ambient.volume = 0.3;
         ambient.play().catch(() => {
-            // If autoplay blocked, play on first user interaction
             document.body.addEventListener('click', () => {
                 ambient.play().catch(() => {});
             }, { once: true });
@@ -184,7 +216,6 @@
             input.value = "";
             input.disabled = true;
             
-            // Show progress bar
             loadBar.classList.add('active');
             loadText.classList.add('active');
             loadProgress.style.width = '10%';
@@ -205,10 +236,13 @@
                 
                 if (!res.ok) throw new Error('API failed');
                 
-                const blob = await res.blob();
+                const data = await res.json();
                 loadProgress.style.width = '90%';
                 
-                const audio = new Audio(URL.createObjectURL(blob));
+                // Convert base64 audio to blob
+                const audioBlob = new Blob([Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
+                const audio = new Audio(URL.createObjectURL(audioBlob));
+                const visemes = data.visemes || [];
                 
                 createAudioWithEcho(audio);
 
@@ -224,53 +258,38 @@
                 audio.onplay = () => {
                     ambient.volume = 0.1;
                     
-                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                    let lastSwitchTime = 0;
-                    let currentVideoIndex = 0;
-                    const videos = [1, 2, 3];
+                    const startTime = audio.currentTime;
+                    let nextVisemeIndex = 0;
                     
-                    function analyzeAndSwitch() {
+                    function syncVisemes() {
                         if (!audio.paused) {
-                            analyser.getByteFrequencyData(dataArray);
+                            const currentTime = audio.currentTime - startTime;
                             
-                            let sum = 0;
-                            for (let i = 0; i < dataArray.length; i++) {
-                                sum += dataArray[i];
-                            }
-                            const average = sum / dataArray.length;
-                            
-                            const now = Date.now();
-                            const switchDelay = average < 150 ? 3000 : average < 200 ? 1500 : 800;
-                            
-                            if (now - lastSwitchTime > switchDelay) {
-                                currentVideoIndex = (currentVideoIndex + 1) % videos.length;
-                                visual.src = '/' + videos[currentVideoIndex] + '.mp4';
+                            // Find current viseme based on timestamp
+                            while (nextVisemeIndex < visemes.length && visemes[nextVisemeIndex].time <= currentTime) {
+                                const visemeId = visemes[nextVisemeIndex].viseme;
+                                const videoNum = visemeToVideo[visemeId] || 1;
+                                
+                                visual.src = '/' + videoNum + '.mp4';
                                 visual.loop = false;
                                 visual.muted = true;
                                 
-                                const brightness = 1.2 + (average / 255) * 1.5;
-                                const saturation = 1.0 + (average / 255) * 0.5;
-                                const contrast = 1.3 + (average / 255) * 0.7;
+                                const brightness = 1.2 + 0.5;
+                                const saturation = 1.0 + 0.3;
+                                const contrast = 1.3 + 0.4;
                                 
                                 visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
-                                
-                                if (average > 220) {
-                                    visual.style.filter = 'brightness(3) saturate(0) contrast(3)';
-                                    setTimeout(() => {
-                                        visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
-                                    }, 100);
-                                }
-                                
                                 visual.load();
                                 visual.play().catch(() => {});
-                                lastSwitchTime = now;
+                                
+                                nextVisemeIndex++;
                             }
                             
-                            animationFrameId = requestAnimationFrame(analyzeAndSwitch);
+                            animationFrameId = requestAnimationFrame(syncVisemes);
                         }
                     }
                     
-                    analyzeAndSwitch();
+                    syncVisemes();
                     
                     audio.onended = () => {
                         cancelAnimationFrame(animationFrameId);
