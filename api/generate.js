@@ -10,6 +10,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Prompt required - at least 5 chars!' });
     }
 
+    // Get Trump speech from Groq
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { 
@@ -36,7 +37,8 @@ export default async function handler(req, res) {
       throw new Error('No content from Groq');
     }
 
-    const elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${process.env.ELEVENLABS_VOICE_ID}`, {
+    // Generate audio from ElevenLabs
+    const elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${process.env.ELEVENLABS_VOICE_ID}?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { 
         "xi-api-key": process.env.ELEVENLABS_API_KEY, 
@@ -56,14 +58,45 @@ export default async function handler(req, res) {
       throw new Error(`ElevenLabs error: ${elevenRes.status}`);
     }
 
-    const buffer = await elevenRes.arrayBuffer();
-    res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Content-Length', buffer.byteLength);
-    return res.status(200).send(Buffer.from(buffer));
+    const audioBuffer = await elevenRes.arrayBuffer();
+
+    // Get viseme data from Azure Speech Service
+    let visemeData = [];
+    try {
+      const azureRes = await fetch(`${process.env.AZURE_SPEECH_ENDPOINT}cognitiveservices/v1?visualizationFormat=json`, {
+        method: "POST",
+        headers: {
+          "Ocp-Apim-Subscription-Key": process.env.AZURE_SPEECH_KEY,
+          "Content-Type": "application/ssml+xml"
+        },
+        body: `<speak version='1.0' xml:lang='en-US'><voice name='en-US-GuyNeural'>${text}</voice></speak>`
+      });
+
+      if (azureRes.ok) {
+        const azureData = await azureRes.json();
+        if (azureData.Visemes) {
+          visemeData = azureData.Visemes.map(v => ({
+            viseme: v.VisemeId,
+            time: v.AudioOffset / 10000000 // Convert to seconds
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn('Viseme extraction failed, continuing without:', e.message);
+      // Continue without visemes - audio will still work
+    }
+
+    // Return audio + viseme data
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    
+    return res.status(200).json({
+      audio: Buffer.from(audioBuffer).toString('base64'),
+      visemes: visemeData
+    });
 
   } catch (e) {
     console.error('Generate error:', e);
     return res.status(500).json({ error: e.message });
   }
 }
-
