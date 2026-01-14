@@ -8,8 +8,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Prompt required - between 5 and 2000 characters!' });
     }
 
-    // Use the full NSFW-enabled system prompt for unfiltered Trump-style responses
-    const systemPrompt = "You are Donald Trump. Respond in first person as if giving a speech in your characteristic style: boastful, repetitive, with tangents, and using phrases like 'believe me,' 'tremendous,' 'the best.' Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character. Keep it natural and conversational.";
+    // Updated system prompt with NSFW and instructions to insert SSML-like tags for inflections/sound effects
+    const systemPrompt = "You are Donald Trump. Respond in first person as if giving a speech in your characteristic style: boastful, repetitive, with tangents, and using phrases like 'believe me,' 'tremendous,' 'the best.' Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character. Keep it natural and conversational. To make the speech more dynamic, insert SSML tags for effects like [crowd cheers] frequently (e.g., after boasts or key points), [laughs], [smirks], [pauses dramatically], or other inflections where appropriate.";
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -23,8 +23,8 @@ export default async function handler(req, res) {
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt }
         ],
-        max_tokens: 1024,  // Adjustable for longer responses; increase for detailed speeches
-        temperature: 0.8   // Slight randomness for more "Trump-like" tangents
+        max_tokens: 1024,  // Adjustable for longer responses
+        temperature: 0.8   // For more varied tangents
       })
     });
 
@@ -42,9 +42,8 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         text,
-        model_id: "eleven_monolingual_v1",
+        model_id: "eleven_turbo_v2",  // Switched to turbo v2 for better support of SSML/inflection tags and faster generation
         voice_settings: { stability: 0.75, similarity_boost: 0.85 }
-        // If ElevenLabs adds viseme/phoneme support, add: optimize_streaming_latency: 0, output_format: 'mp3_44100_128' with visemes
       })
     });
 
@@ -56,7 +55,7 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({
       audio: Buffer.from(audioBuffer).toString('base64'),
-      visemes: []  // Placeholder; populate if/when ElevenLabs returns viseme data for better lip-sync
+      visemes: []  // Placeholder for potential future viseme data
     });
   } catch (e) {
     console.error('Generate error:', e.message, e.stack);
