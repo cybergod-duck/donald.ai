@@ -9,6 +9,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Prompt required - at least 5 chars!' });
     }
 
+    // Step 1: Generate text with Groq
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { 
@@ -29,6 +30,7 @@ export default async function handler(req, res) {
     const text = gData?.choices?.[0]?.message?.content;
     if (!text) throw new Error('No content from Groq');
 
+    // Step 2: Generate audio with ElevenLabs
     const elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${process.env.ELEVENLABS_VOICE_ID}?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { 
@@ -45,39 +47,8 @@ export default async function handler(req, res) {
     if (!elevenRes.ok) throw new Error(`ElevenLabs error: ${elevenRes.status}`);
     const audioBuffer = await elevenRes.arrayBuffer();
 
-    let visemeData = [];
-    try {
-      const azureRes = await fetch(`${process.env.AZURE_SPEECH_ENDPOINT}cognitiveservices/v1?visualizationFormat=json`, {
-        method: "POST",
-        headers: {
-          "Ocp-Apim-Subscription-Key": process.env.AZURE_SPEECH_KEY,
-          "Content-Type": "application/ssml+xml"
-        },
-        body: `<speak version='1.0' xml:lang='en-US'><voice name='en-US-GuyNeural'>${text}</voice></speak>`
-      });
-
-      if (azureRes.ok) {
-        const azureData = await azureRes.json();
-        if (azureData.Visemes) {
-          visemeData = azureData.Visemes.map(v => ({
-            viseme: v.VisemeId,
-            time: v.AudioOffset / 10000000
-          }));
-        }
-      }
-    } catch (e) {
-      console.warn('Viseme extraction failed:', e.message);
-    }
-
+    // Return audio (no visemes - using audio-reactive lip sync instead)
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({
-      audio: Buffer.from(audioBuffer).toString('base64'),
-      visemes: visemeData
-    });
-
-  } catch (e) {
-    console.error('Generate error:', e);
-    return res.status(500).json({ error: e.message });
-  }
-}
+      audio
