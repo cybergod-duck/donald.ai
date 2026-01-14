@@ -1,3 +1,5 @@
+
+generate_CLEAN.js
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).send('Method Not Allowed');
@@ -51,4 +53,12 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({
-      audio
+      audio: Buffer.from(audioBuffer).toString('base64'),
+      visemes: [] // Empty - frontend will use audio-reactive sync
+    });
+
+  } catch (e) {
+    console.error('Generate error:', e);
+    return res.status(500).json({ error: e.message });
+  }
+}
