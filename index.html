@@ -28,7 +28,7 @@
         #title h1 { font-size: 3rem; color: #0066cc; text-shadow: 0 0 15px #0066cc, 0 0 30px #0066cc, 0 0 45px rgba(0, 102, 204, 0.5); margin: 0; font-weight: bold; }
         #title p { font-size: 1.2rem; color: #ffffff; margin: 35px 0 0 0; opacity: 0.9; }
 
-        #random-btn { 
+        #random-btn, #music-toggle { 
             margin-top: 15px;
             background: transparent; 
             border: 2px solid #0f0; 
@@ -41,7 +41,7 @@
             box-shadow: 0 0 10px #0f0;
         }
 
-        #random-btn:hover { 
+        #random-btn:hover, #music-toggle:hover { 
             background: #0f0; 
             color: #000; 
             box-shadow: 0 0 30px #0f0;
@@ -108,6 +108,7 @@
     </div>
 
     <button id="random-btn">🎲 RANDOM SPEECH</button>
+    <button id="music-toggle">🎵 TOGGLE MUSIC</button>  <!-- New button for ambient toggle -->
 
     <div id="keyboard-hint">
         [SPACE] Pause/Resume • [M] Mute/Unmute • [R] Random • [ESC] Stop
@@ -136,6 +137,7 @@
         const ambient = document.getElementById('ambient');
         const clickSound = document.getElementById('click-sound');
         const randomBtn = document.getElementById('random-btn');
+        const musicToggle = document.getElementById('music-toggle');
 
         let isIdle = true;
         let audioContext = null;
@@ -147,6 +149,21 @@
         let isMuted = false;
         let lastVideoNum = null;
         let videoHistory = [];
+        let isAmbientOn = true;  // Default ambient on
+
+        // Array of cheer sound URLs based on uploaded files
+        const cheerSounds = [
+            GITHUB_BASE + "cheer1.mp3",
+            GITHUB_BASE + "cheer2.mp3",
+            GITHUB_BASE + "cheer3.mp3",
+            GITHUB_BASE + "cheer4.mp3",
+            GITHUB_BASE + "cheer5.mp3"
+        ];
+
+        let cheerAudio = null;  // For playing cheers
+        let lastPauseTime = 0;  // Track pause detection
+        const pauseThreshold = 1500;  // ms of low volume/closed mouth to trigger cheer (tweak as needed)
+        const cheerChance = 0.3;  // 30% chance to play during a pause (to avoid overdoing it)
 
         const randomTopics = [
             "Tell me about America",
@@ -159,8 +176,6 @@
             "Talk about being a winner"
         ];
 
-        // Further expanded for max variety, assuming 1-14 clips from different sources/movies
-        // Overlap categories to pull from all clips more often
         const mouthShapes = {
             wide_open: [1, 4, 7, 8, 9, 10, 11, 12, 13, 14],
             open: [2, 3, 5, 6, 7, 8, 9, 10, 11],
@@ -169,7 +184,8 @@
             neutral: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]  // All for fallback variety
         };
 
-        const systemPrompt = "You are Donald Trump. Respond in first person as if giving a speech in your characteristic style: boastful, repetitive, with tangents, and using phrases like 'believe me,' 'tremendous,' 'the best.' Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character.";
+        // Updated system prompt to insert [pause] tags for dramatic effect
+        const systemPrompt = "You are Donald Trump. Respond in first person as if giving a speech in your characteristic style: boastful, repetitive, with tangents, and using phrases like 'believe me,' 'tremendous,' 'the best.' Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character. Keep it natural and conversational. To add dynamic effects, frequently insert ONLY these supported audio tags where they fit: [laughs] for humor, [sarcastic] for smirking/sarcasm, [excited] for happy/energetic moments, [applause] or [clapping] for crowd cheers after big statements, [sighs] for pauses, [whispers] for emphasis, [gasp] for surprise, and [pause] for dramatic silences or breaks in the speech. Do NOT use unsupported tags like [smirks], [happy], or [crowd cheers]—they will be spoken literally. Use tags sparingly but effectively, especially [pause] to create moments of tension or emphasis.";
 
         function updateProgress(target, duration = 2000) {
             if (progressInterval) clearInterval(progressInterval);
@@ -187,11 +203,23 @@
         }
 
         function startAmbient() {
-            if (!ambientStarted) {
+            if (!ambientStarted && isAmbientOn) {
                 ambient.volume = 0.3;
                 ambient.play().then(() => {
                     ambientStarted = true;
                 }).catch(() => {});
+            }
+        }
+
+        function toggleAmbient() {
+            isAmbientOn = !isAmbientOn;
+            if (isAmbientOn) {
+                startAmbient();
+                musicToggle.textContent = '🎵 TOGGLE MUSIC (ON)';
+            } else {
+                ambient.pause();
+                ambientStarted = false;
+                musicToggle.textContent = '🎵 TOGGLE MUSIC (OFF)';
             }
         }
 
@@ -207,6 +235,11 @@
                 currentSpeechAudio.currentTime = 0;
                 currentSpeechAudio = null;
             }
+            if (cheerAudio) {
+                cheerAudio.pause();
+                cheerAudio.currentTime = 0;
+                cheerAudio = null;
+            }
             cancelAnimationFrame(animationFrameId);
             isIdle = true;
             ambient.volume = 0.3;
@@ -217,11 +250,11 @@
             loadText.classList.remove('active');
             lastVideoNum = null;
             videoHistory = [];
+            lastPauseTime = 0;
         }
 
+        // Fixed keyboard listener: Use capture true for global capture, and relax input focus check
         document.addEventListener('keydown', (e) => {
-            if (document.activeElement === input && e.key !== 'Escape') return;
-
             switch(e.key) {
                 case ' ':
                     e.preventDefault();
@@ -246,10 +279,8 @@
 
                 case 'r':
                 case 'R':
-                    if (document.activeElement !== input) {
-                        e.preventDefault();
-                        randomBtn.click();
-                    }
+                    e.preventDefault();
+                    randomBtn.click();
                     break;
 
                 case 'Escape':
@@ -257,7 +288,7 @@
                     stopCurrentSpeech();
                     break;
             }
-        });
+        }, { capture: true });
 
         window.addEventListener('DOMContentLoaded', () => {
             loadIdleVideo();
@@ -282,6 +313,8 @@
                 processPrompt();
             }, 100);
         });
+
+        musicToggle.addEventListener('click', toggleAmbient);
 
         function createAudioWithEcho(audioElement) {
             if (!audioContext) {
@@ -314,6 +347,21 @@
             analyser.connect(audioContext.destination);
 
             return source;
+        }
+
+        // Function to play a random cheer sound
+        function playRandomCheer() {
+            if (cheerSounds.length === 0 || isMuted) return;
+
+            const randomCheer = cheerSounds[Math.floor(Math.random() * cheerSounds.length)];
+            cheerAudio = new Audio(randomCheer);
+            cheerAudio.volume = 0.5;  // Adjust volume (lower than speech)
+            cheerAudio.play().catch(e => console.error('Cheer play failed:', e));
+
+            // Fade out after playing to blend
+            cheerAudio.onended = () => {
+                cheerAudio = null;
+            };
         }
 
         input.onkeydown = async (e) => {
@@ -403,6 +451,8 @@
                     const timeData = new Uint8Array(analyser.fftSize);
                     let lastSwitchTime = 0;
                     let currentMouthShape = 'neutral';
+                    let currentPauseStart = 0;
+                    let isPaused = false;
 
                     function getSmartMouthShape(freqData, timeData) {
                         let volumeSum = 0;
@@ -424,10 +474,10 @@
                         return 'neutral';
                     }
 
-                    function switchVideo(videoNum) {
+                    function switchVideo(videoNum, isPause = false) {
                         visual.style.opacity = 0;  // Fade out current
                         visual.src = GITHUB_BASE + videoNum + '.mp4';
-                        visual.loop = false;
+                        visual.loop = isPause;  // Loop during pauses for "still" effect
                         visual.muted = true;
                         const brightness = 1.7;
                         const saturation = 1.3;
@@ -437,7 +487,6 @@
                         visual.load();
 
                         visual.onloadedmetadata = () => {
-                            // Random start time to show different parts (beginning, middle, end)
                             visual.currentTime = Math.random() * visual.duration;
                             visual.play().catch(() => {});
                             visual.style.opacity = 1;  // Fade in new video
@@ -452,25 +501,47 @@
                             const now = Date.now();
                             const mouthShape = getSmartMouthShape(frequencyData, timeData);
 
-                            // Slightly lowered timings for more frequent switches without too much flashing
+                            // Pause detection: Low volume/closed mouth for threshold time
+                            const volumeSum = timeData.reduce((sum, val) => sum + Math.abs(val - 128), 0);
+                            const volume = volumeSum / timeData.length;
+                            if ((mouthShape === 'closed' || mouthShape === 'neutral') && volume < 10) {
+                                if (currentPauseStart === 0) {
+                                    currentPauseStart = now;
+                                } else if (now - currentPauseStart > pauseThreshold) {
+                                    if (Math.random() < cheerChance && !cheerAudio) {
+                                        playRandomCheer();
+                                    }
+                                    if (!isPaused) {
+                                        visual.pause();  // Pause video to "slow down" during silence
+                                        isPaused = true;
+                                    }
+                                    currentPauseStart = now;  // Extend pause detection
+                                }
+                            } else {
+                                currentPauseStart = 0;
+                                if (isPaused) {
+                                    visual.play();  // Resume video when speaking resumes
+                                    isPaused = false;
+                                }
+                            }
+
                             if ((mouthShape !== currentMouthShape && now - lastSwitchTime > 500) || 
                                 now - lastSwitchTime > 1500) {
 
                                 const videoOptions = mouthShapes[mouthShape];
 
-                                // Avoid immediate repeat and recent history for more variety across "movies"
                                 let availableVideos = videoOptions.filter(v => !videoHistory.includes(v));
-                                if (availableVideos.length < 2) {  // Ensure at least 2 options to avoid repetition
+                                if (availableVideos.length < 2) {
                                     availableVideos = videoOptions;
-                                    videoHistory = [];  // Reset history if options run low
+                                    videoHistory = [];
                                 }
 
                                 const videoNum = availableVideos[Math.floor(Math.random() * availableVideos.length)];
 
-                                switchVideo(videoNum);
+                                switchVideo(videoNum, mouthShape === 'closed' || mouthShape === 'neutral');  // Loop if paused/closed
                                 lastVideoNum = videoNum;
                                 videoHistory.push(videoNum);
-                                if (videoHistory.length > 4) videoHistory.shift();  // Longer history to cycle more
+                                if (videoHistory.length > 4) videoHistory.shift();
                                 currentMouthShape = mouthShape;
                                 lastSwitchTime = now;
                             }
