@@ -10,6 +10,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Prompt required - at least 5 chars!' });
     }
 
+    console.log('1. Got prompt:', prompt);
+
     // Get Trump speech from Groq
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -37,6 +39,8 @@ export default async function handler(req, res) {
       throw new Error('No content from Groq');
     }
 
+    console.log('2. Got text from Groq');
+
     // Generate audio from ElevenLabs
     const elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${process.env.ELEVENLABS_VOICE_ID}?output_format=mp3_44100_128`, {
       method: "POST",
@@ -59,8 +63,13 @@ export default async function handler(req, res) {
     }
 
     const audioBuffer = await elevenRes.arrayBuffer();
+    console.log('3. Got audio from ElevenLabs, size:', audioBuffer.byteLength);
 
-    // Get viseme data from Azure Speech Service
+    // Try Azure Speech Service
+    console.log('4. Trying Azure with endpoint:', process.env.AZURE_SPEECH_ENDPOINT);
+    console.log('5. Key exists:', !!process.env.AZURE_SPEECH_KEY);
+    console.log('6. Region:', process.env.AZURE_SPEECH_REGION);
+
     let visemeData = [];
     try {
       const azureRes = await fetch(`${process.env.AZURE_SPEECH_ENDPOINT}cognitiveservices/v1?visualizationFormat=json`, {
@@ -72,21 +81,28 @@ export default async function handler(req, res) {
         body: `<speak version='1.0' xml:lang='en-US'><voice name='en-US-GuyNeural'>${text}</voice></speak>`
       });
 
+      console.log('7. Azure response status:', azureRes.status);
+
       if (azureRes.ok) {
         const azureData = await azureRes.json();
+        console.log('8. Azure data:', azureData);
         if (azureData.Visemes) {
           visemeData = azureData.Visemes.map(v => ({
             viseme: v.VisemeId,
-            time: v.AudioOffset / 10000000 // Convert to seconds
+            time: v.AudioOffset / 10000000
           }));
+          console.log('9. Got visemes:', visemeData.length);
         }
+      } else {
+        const errorText = await azureRes.text();
+        console.log('8. Azure error:', azureRes.status, errorText);
       }
     } catch (e) {
-      console.warn('Viseme extraction failed, continuing without:', e.message);
-      // Continue without visemes - audio will still work
+      console.warn('Viseme extraction failed:', e.message);
     }
 
-    // Return audio + viseme data
+    console.log('10. Returning response');
+
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
     
