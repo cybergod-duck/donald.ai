@@ -5,84 +5,43 @@
     <title>DON.AI | CYBERTRUMP</title>
     <style>
         body { background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        #frame { width: 800px; height: 450px; border: 2px solid #0f0; position: relative; background: #000; box-shadow: 0 0 20px #0f0; transition: box-shadow 0.3s; }
-        #frame:hover { box-shadow: 0 0 40px #0f0; }
-        #visual { width: 100%; height: 100%; object-fit: cover; transition: transform 0.1s ease-out, filter 0.3s; }
+        #frame { width: 800px; height: 450px; border: 2px solid #0f0; position: relative; background: #000; box-shadow: 0 0 20px #0f0; }
+        #visual { width: 100%; height: 100%; object-fit: cover; }
         
         #frame::after { 
             content: " "; position: absolute; top: 0; left: 0; bottom: 0; right: 0; 
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); 
             z-index: 50; background-size: 100% 2px, 3px 100%; 
             pointer-events: none;
-            transition: opacity 0.3s;
         }
         
-        #frame:hover::after { opacity: 1.5; }
-        
-        /* Audio visualization bars */
-        #audio-viz { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 10px; box-sizing: border-box; pointer-events: none; z-index: 60; opacity: 0; transition: opacity 0.3s; }
-        #audio-viz.active { opacity: 1; }
-        .viz-bar { width: 8px; background: linear-gradient(to top, #0f0, #0ff); margin: 0 2px; transition: height 0.1s; box-shadow: 0 0 10px #0f0; }
-        
-        /* VU Meter */
-        #vu-meter { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 300px; height: 20px; background: rgba(0, 0, 0, 0.7); border: 1px solid #0f0; z-index: 70; display: none; }
-        #vu-meter.active { display: block; }
-        #vu-level { height: 100%; background: linear-gradient(to right, #0f0, #ff0, #f00); width: 0%; transition: width 0.1s; box-shadow: 0 0 10px #0f0; }
-        
-        /* Glitch intensity slider */
-        #glitch-control { position: absolute; top: 10px; right: 10px; z-index: 70; opacity: 0; transition: opacity 0.3s; }
-        #frame:hover #glitch-control { opacity: 1; }
-        #glitch-slider { width: 150px; height: 4px; background: #0f0; border: 1px solid #0f0; cursor: pointer; }
-        #glitch-slider::-webkit-slider-thumb { width: 15px; height: 15px; background: #0f0; cursor: pointer; border-radius: 50%; box-shadow: 0 0 10px #0f0; }
-        .slider-label { color: #0f0; font-size: 0.7rem; margin-bottom: 3px; }
-        
         #load-bar { position: absolute; top: 0; left: 0; width: 0%; height: 4px; background: #0f0; box-shadow: 0 0 10px #0f0; transition: width 0.3s; z-index: 100; }
-        #terminal { width: 800px; margin-top: 15px; border: 1px solid #0f0; padding: 10px; background: #000; cursor: text; position: relative; }
-        #terminal-display { color: #0f0; font-size: 1.2rem; min-height: 1.5rem; margin-bottom: 5px; }
-        .cursor { animation: blink 1s infinite; }
-        input { background: transparent; border: none; color: #0f0; width: 95%; font-size: 1.2rem; outline: none; font-family: inherit; opacity: 0; position: absolute; }
+        #terminal { width: 800px; margin-top: 15px; border: 1px solid #0f0; padding: 10px; background: #000; cursor: text; }
+        input { background: transparent; border: none; color: #0f0; width: 95%; font-size: 1.2rem; outline: none; font-family: inherit; }
         
-        /* Keyboard shortcuts help */
-        #shortcuts { position: absolute; bottom: 10px; right: 10px; color: #0f0; font-size: 0.7rem; opacity: 0.5; z-index: 80; }
-        
-        .glitch { animation: g 0.15s infinite; filter: hue-rotate(90deg) contrast(2) brightness(1.2); }
         #title { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 100; }
         #title h1 { font-size: 3rem; color: #0066cc; text-shadow: 0 0 15px #0066cc, 0 0 30px #0066cc, 0 0 45px rgba(0, 102, 204, 0.5); margin: 0; font-weight: bold; }
         #title p { font-size: 1.2rem; color: #ffffff; margin: 35px 0 0 0; opacity: 0.9; }
         
-        #quick-prompts { 
-            display: flex; 
-            gap: 10px; 
-            margin-top: 15px; 
-            justify-content: center; 
-        }
-        
-        .prompt-btn { 
+        #random-btn { 
+            margin-top: 15px;
             background: transparent; 
-            border: 1px solid #0f0; 
+            border: 2px solid #0f0; 
             color: #0f0; 
-            padding: 8px 16px; 
+            padding: 12px 30px; 
             font-family: 'Courier New', monospace; 
-            font-size: 0.9rem; 
+            font-size: 1.1rem; 
             cursor: pointer; 
             transition: all 0.2s;
-            box-shadow: 0 0 5px #0f0;
-        }
-        
-        .prompt-btn:hover { 
-            background: #0f0; 
-            color: #000; 
-            box-shadow: 0 0 20px #0f0;
-            transform: translateY(-2px);
-        }
-        
-        .prompt-btn:active {
-            transform: translateY(0);
             box-shadow: 0 0 10px #0f0;
         }
         
-        @keyframes g { 0% { transform: translate(2px, 1px); } 50% { transform: translate(-2px, -1px); } 100% { transform: translate(0); } }
-        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+        #random-btn:hover { 
+            background: #0f0; 
+            color: #000; 
+            box-shadow: 0 0 30px #0f0;
+            transform: scale(1.05);
+        }
         
         @keyframes flash-white { 
             0% { filter: brightness(1); } 
@@ -90,12 +49,6 @@
             100% { filter: brightness(1); } 
         }
         
-        @keyframes breathe {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.02); }
-        }
-        
-        .breathing { animation: breathe 4s ease-in-out infinite; }
         .flash-transition { animation: flash-white 0.4s ease-out; }
     </style>
 </head>
@@ -106,48 +59,19 @@
     </div>
     <div id="frame">
         <div id="load-bar"></div>
-        <video id="visual" src="/6.mp4" muted autoplay loop playsinline class="breathing"></video>
-        
-        <!-- Audio visualization bars -->
-        <div id="audio-viz"></div>
-        
-        <!-- VU Meter -->
-        <div id="vu-meter">
-            <div id="vu-level"></div>
-        </div>
-        
-        <!-- Glitch intensity slider -->
-        <div id="glitch-control">
-            <div class="slider-label">GLITCH</div>
-            <input type="range" id="glitch-slider" min="0" max="100" value="70">
-        </div>
+        <video id="visual" src="/6.mp4" muted autoplay loop playsinline></video>
     </div>
-    
     <div id="terminal">
-        <span>> </span><span id="terminal-display"></span><span class="cursor">_</span>
-        <input type="text" id="cmd" autocomplete="off">
+        <span>> </span><input type="text" id="cmd" placeholder="ASK TRUMP ANYTHING..." autocomplete="off">
     </div>
     
-    <div id="quick-prompts">
-        <button class="prompt-btn" data-prompt="Tell me about America">🇺🇸 AMERICA</button>
-        <button class="prompt-btn" data-prompt="Give me business advice">💼 BUSINESS</button>
-        <button class="prompt-btn" data-prompt="Motivate me to win">🏆 WINNING</button>
-        <button class="prompt-btn" data-prompt="Talk about your greatest achievements">⭐ GREATEST</button>
-    </div>
-    
-    <div id="shortcuts">
-        ESC: Stop | SPACE: Pause | R: Replay | ←→: Cycle prompts
-    </div>
+    <button id="random-btn">🎲 RANDOM SPEECH</button>
 
     <audio id="ambient" loop>
         <source src="/drone.mp3" type="audio/mpeg">
     </audio>
     
     <audio id="click-sound">
-        <source src="/click.mp3" type="audio/mpeg">
-    </audio>
-    
-    <audio id="keystroke-sound">
         <source src="/click.mp3" type="audio/mpeg">
     </audio>
 
@@ -157,41 +81,26 @@
         const bar = document.getElementById('load-bar');
         const ambient = document.getElementById('ambient');
         const clickSound = document.getElementById('click-sound');
-        const keystrokeSound = document.getElementById('keystroke-sound');
-        const frame = document.getElementById('frame');
-        const promptButtons = document.querySelectorAll('.prompt-btn');
-        const terminalDisplay = document.getElementById('terminal-display');
-        const audioViz = document.getElementById('audio-viz');
-        const vuMeter = document.getElementById('vu-meter');
-        const vuLevel = document.getElementById('vu-level');
-        const glitchSlider = document.getElementById('glitch-slider');
+        const randomBtn = document.getElementById('random-btn');
         
         let ambientStarted = false;
         let isIdle = true;
         let audioContext = null;
         let analyser = null;
         let animationFrameId = null;
-        let currentAudio = null;
-        let lastResponse = null;
-        let currentPromptIndex = 0;
-        let glitchIntensity = 0.7;
-        let rgbShift = 0;
-        
-        // Create visualization bars
-        for (let i = 0; i < 32; i++) {
-            const bar = document.createElement('div');
-            bar.className = 'viz-bar';
-            bar.style.height = '10px';
-            audioViz.appendChild(bar);
-        }
-        const vizBars = document.querySelectorAll('.viz-bar');
+
+        const randomTopics = [
+            "Tell me about America",
+            "Give me business advice",
+            "Motivate me to win",
+            "Talk about your greatest achievements",
+            "Tell me about success",
+            "What makes America great",
+            "Give me a pep talk",
+            "Talk about being a winner"
+        ];
 
         input.focus();
-        
-        // Glitch intensity slider
-        glitchSlider.addEventListener('input', (e) => {
-            glitchIntensity = e.target.value / 100;
-        });
         
         function startAmbient() {
             if (!ambientStarted) {
@@ -201,69 +110,48 @@
             }
         }
         
-        // Typing animation
-        let typingQueue = '';
-        let isTyping = false;
-        
-        input.addEventListener('input', (e) => {
-            typingQueue = e.target.value;
-            if (!isTyping) {
-                animateTyping();
-            }
+        // Random speech button
+        randomBtn.addEventListener('click', () => {
+            clickSound.currentTime = 0;
+            clickSound.volume = 0.5;
+            clickSound.play().catch(() => {});
+            
+            const randomPrompt = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+            input.value = randomPrompt;
+            
+            setTimeout(() => {
+                processPrompt();
+            }, 100);
         });
         
-        function animateTyping() {
-            if (typingQueue.length > terminalDisplay.textContent.length) {
-                isTyping = true;
-                const nextChar = typingQueue[terminalDisplay.textContent.length];
-                terminalDisplay.textContent += nextChar;
-                
-                keystrokeSound.currentTime = 0;
-                keystrokeSound.volume = 0.15;
-                keystrokeSound.play().catch(() => {});
-                
-                setTimeout(animateTyping, 50);
-            } else if (typingQueue.length < terminalDisplay.textContent.length) {
-                terminalDisplay.textContent = typingQueue;
-                isTyping = false;
-            } else {
-                isTyping = false;
-            }
-        }
-        
-        // Create Web Audio API context with reverb
-        function createAudioWithReverb(audioElement) {
+        // Create Web Audio API with soft echo using delay
+        function createAudioWithEcho(audioElement) {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
             }
             
             const source = audioContext.createMediaElementSource(audioElement);
-            const convolver = audioContext.createConvolver();
-            const dryGain = audioContext.createGain();
+            const delay = audioContext.createDelay();
+            const feedback = audioContext.createGain();
             const wetGain = audioContext.createGain();
+            const dryGain = audioContext.createGain();
             analyser = audioContext.createAnalyser();
             
-            analyser.fftSize = 256;
+            analyser.fftSize = 128;
             analyser.smoothingTimeConstant = 0.8;
             
-            const sampleRate = audioContext.sampleRate;
-            const length = sampleRate * 2;
-            const impulse = audioContext.createBuffer(2, length, sampleRate);
+            // Soft echo settings
+            delay.delayTime.value = 0.25; // 250ms delay (soft echo)
+            feedback.gain.value = 0.2; // Low feedback for subtle repeat
+            wetGain.gain.value = 0.2; // 20% echo
+            dryGain.gain.value = 0.9; // 90% dry signal
             
-            for (let channel = 0; channel < 2; channel++) {
-                const channelData = impulse.getChannelData(channel);
-                for (let i = 0; i < length; i++) {
-                    channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
-                }
-            }
-            convolver.buffer = impulse;
-            
-            dryGain.gain.value = 0.7;
-            wetGain.gain.value = 0.5;
-            
+            // Routing: source -> dry + echo path
             source.connect(dryGain);
-            source.connect(convolver);
-            convolver.connect(wetGain);
+            source.connect(delay);
+            delay.connect(feedback);
+            feedback.connect(delay); // Feedback loop
+            delay.connect(wetGain);
             
             dryGain.connect(analyser);
             wetGain.connect(analyser);
@@ -271,160 +159,6 @@
             
             return source;
         }
-        
-        // Mouse effects on video
-        let mouseX = 0, mouseY = 0;
-        frame.addEventListener('mousemove', (e) => {
-            const rect = frame.getBoundingClientRect();
-            mouseX = (e.clientX - rect.left) / rect.width - 0.5;
-            mouseY = (e.clientY - rect.top) / rect.height - 0.5;
-            
-            if (isIdle && visual.src.includes('/6.mp4')) {
-                const rotateX = mouseY * 3;
-                const rotateY = mouseX * -3;
-                visual.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
-                
-                // Shift ambient pitch based on Y position
-                if (ambient.playbackRate) {
-                    ambient.playbackRate = 1 + (mouseY * 0.1);
-                }
-            }
-            
-            // RGB chromatic aberration on hover
-            if (!isIdle) {
-                rgbShift = Math.abs(mouseX) * 5 + Math.abs(mouseY) * 5;
-                const currentFilter = visual.style.filter;
-                visual.style.filter = currentFilter + ` drop-shadow(${rgbShift}px 0 0 red) drop-shadow(-${rgbShift}px 0 0 cyan)`;
-            }
-        });
-        
-        frame.addEventListener('mouseleave', () => {
-            if (isIdle) {
-                visual.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
-                ambient.playbackRate = 1;
-            }
-            rgbShift = 0;
-        });
-        
-        // Intensify glitch on hover
-        frame.addEventListener('mouseenter', () => {
-            if (!isIdle) {
-                visual.style.filter = `brightness(1.5) saturate(1.5) contrast(2) hue-rotate(10deg)`;
-            }
-        });
-        
-        input.addEventListener('mouseenter', () => {
-            if (isIdle && visual.src.includes('/6.mp4')) {
-                visual.style.filter = 'brightness(1.2)';
-            }
-        });
-        
-        input.addEventListener('mouseleave', () => {
-            if (isIdle && visual.src.includes('/6.mp4')) {
-                visual.style.filter = '';
-            }
-        });
-        
-        setInterval(() => {
-            if (isIdle && visual.src.includes('/6.mp4')) {
-                visual.style.opacity = '0.7';
-                setTimeout(() => {
-                    visual.style.opacity = '1';
-                }, 80);
-            }
-        }, Math.random() * 8000 + 5000);
-
-        promptButtons.forEach((btn, index) => {
-            btn.addEventListener('click', () => {
-                clickSound.currentTime = 0;
-                clickSound.volume = 0.5;
-                clickSound.play().catch(() => {});
-                
-                const prompt = btn.getAttribute('data-prompt');
-                input.value = prompt;
-                typingQueue = prompt;
-                currentPromptIndex = index;
-                animateTyping();
-                
-                setTimeout(() => {
-                    processPrompt();
-                }, 100);
-            });
-        });
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && currentAudio) {
-                currentAudio.pause();
-                currentAudio.currentTime = 0;
-                returnToIdle();
-            } else if (e.key === ' ' && currentAudio && !input.matches(':focus')) {
-                e.preventDefault();
-                if (currentAudio.paused) {
-                    currentAudio.play();
-                } else {
-                    currentAudio.pause();
-                }
-            } else if (e.key === 'r' && lastResponse && isIdle) {
-                playLastResponse();
-            } else if (e.key === 'ArrowLeft' && isIdle) {
-                e.preventDefault();
-                currentPromptIndex = (currentPromptIndex - 1 + promptButtons.length) % promptButtons.length;
-                promptButtons[currentPromptIndex].click();
-            } else if (e.key === 'ArrowRight' && isIdle) {
-                e.preventDefault();
-                currentPromptIndex = (currentPromptIndex + 1) % promptButtons.length;
-                promptButtons[currentPromptIndex].click();
-            }
-        });
-        
-        function returnToIdle() {
-            cancelAnimationFrame(animationFrameId);
-            isIdle = true;
-            ambient.volume = 0.3;
-            audioViz.classList.remove('active');
-            vuMeter.classList.remove('active');
-            
-            visual.src = "/6.mp4";
-            visual.loop = true;
-            visual.style.filter = '';
-            visual.style.transform = '';
-            visual.classList.add('breathing');
-            visual.load();
-            visual.play().catch(() => {});
-            input.style.opacity = "1";
-            terminalDisplay.textContent = '';
-            input.value = '';
-            typingQueue = '';
-            bar.style.width = "0%";
-        }
-        
-        function playLastResponse() {
-            if (lastResponse) {
-                const audio = new Audio(lastResponse);
-                startSpeech(audio);
-            }
-        }
-
-        let strobeActive = false;
-        visual.addEventListener('timeupdate', () => {
-            if (visual.src.includes('/6.mp4') && visual.duration > 0) {
-                const timeLeft = visual.duration - visual.currentTime;
-                if (timeLeft < 0.6 && timeLeft > 0 && !strobeActive) {
-                    strobeActive = true;
-                    let count = 0;
-                    const strobeInterval = setInterval(() => {
-                        visual.style.opacity = count % 2 === 0 ? '0.3' : '1';
-                        count++;
-                        if (count >= 6) {
-                            clearInterval(strobeInterval);
-                            visual.style.opacity = '1';
-                            strobeActive = false;
-                        }
-                    }, 50);
-                }
-            }
-        });
 
         input.onkeydown = async (e) => {
             if (e.key === 'Enter') {
@@ -440,17 +174,12 @@
             if (!prompt) return;
 
             isIdle = false;
-            visual.classList.remove('breathing');
             
-            terminalDisplay.textContent = '';
-            input.value = '';
-            typingQueue = '';
+            input.value = "";
             input.style.opacity = "0.3";
             bar.style.width = "30%";
             
             visual.classList.add('flash-transition');
-            visual.style.transform = '';
-            visual.style.filter = '';
             setTimeout(() => visual.classList.remove('flash-transition'), 400);
 
             try {
@@ -463,92 +192,93 @@
                 if (!res.ok) throw new Error('API failed');
                 
                 const blob = await res.blob();
-                const url = URL.createObjectURL(blob);
-                lastResponse = url;
-                const audio = new Audio(url);
+                const audio = new Audio(URL.createObjectURL(blob));
                 
-                startSpeech(audio);
+                createAudioWithEcho(audio);
+
+                audio.onplay = () => {
+                    bar.style.width = "0%";
+                    ambient.volume = 0.1;
+                    
+                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    let lastSwitchTime = 0;
+                    let currentVideoIndex = 0;
+                    const videos = [1, 2, 3];
+                    
+                    function analyzeAndSwitch() {
+                        if (!audio.paused) {
+                            analyser.getByteFrequencyData(dataArray);
+                            
+                            let sum = 0;
+                            for (let i = 0; i < dataArray.length; i++) {
+                                sum += dataArray[i];
+                            }
+                            const average = sum / dataArray.length;
+                            
+                            const now = Date.now();
+                            const switchDelay = average < 150 ? 3000 : average < 200 ? 1500 : 800;
+                            
+                            if (now - lastSwitchTime > switchDelay) {
+                                currentVideoIndex = (currentVideoIndex + 1) % videos.length;
+                                visual.src = '/' + videos[currentVideoIndex] + '.mp4';
+                                visual.loop = false;
+                                visual.muted = true;
+                                
+                                const brightness = 1.2 + (average / 255) * 1.5;
+                                const saturation = 1.0 + (average / 255) * 0.5;
+                                const contrast = 1.3 + (average / 255) * 0.7;
+                                
+                                visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
+                                
+                                if (average > 220) {
+                                    visual.style.filter = 'brightness(3) saturate(0) contrast(3)';
+                                    setTimeout(() => {
+                                        visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
+                                    }, 100);
+                                }
+                                
+                                visual.load();
+                                visual.play().catch(() => {});
+                                lastSwitchTime = now;
+                            }
+                            
+                            animationFrameId = requestAnimationFrame(analyzeAndSwitch);
+                        }
+                    }
+                    
+                    analyzeAndSwitch();
+                    
+                    audio.onended = () => {
+                        cancelAnimationFrame(animationFrameId);
+                        isIdle = true;
+                        ambient.volume = 0.3;
+                        
+                        visual.src = "/6.mp4";
+                        visual.loop = true;
+                        visual.style.filter = '';
+                        visual.load();
+                        visual.play().catch(() => {});
+                        input.style.opacity = "1";
+                        input.focus();
+                    };
+                };
+                
+                audio.play();
                 
             } catch (err) {
                 console.error(err);
                 alert("CONNECTION ERROR");
-                returnToIdle();
-            }
-        }
-        
-        function startSpeech(audio) {
-            currentAudio = audio;
-            createAudioWithReverb(audio);
-
-            audio.onplay = () => {
+                isIdle = true;
+                ambient.volume = 0.3;
+                visual.src = "/6.mp4";
+                visual.loop = true;
+                visual.style.filter = '';
+                visual.load();
+                visual.play().catch(() => {});
+                input.style.opacity = "1";
                 bar.style.width = "0%";
-                ambient.volume = 0.1;
-                audioViz.classList.add('active');
-                vuMeter.classList.add('active');
-                
-                const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                let lastSwitchTime = 0;
-                let currentVideoIndex = 0;
-                const videos = [1, 2, 3];
-                
-                function analyzeAndSwitch() {
-                    if (!audio.paused) {
-                        analyser.getByteFrequencyData(dataArray);
-                        
-                        let sum = 0;
-                        for (let i = 0; i < dataArray.length; i++) {
-                            sum += dataArray[i];
-                        }
-                        const average = sum / dataArray.length;
-                        
-                        // Update visualization bars
-                        vizBars.forEach((bar, i) => {
-                            const value = dataArray[Math.floor(i * dataArray.length / vizBars.length)];
-                            bar.style.height = `${(value / 255) * 100}%`;
-                        });
-                        
-                        // Update VU meter
-                        vuLevel.style.width = `${(average / 255) * 100}%`;
-                        
-                        const now = Date.now();
-                        const switchDelay = average < 150 ? 3000 : average < 200 ? 1500 : 800;
-                        
-                        if (now - lastSwitchTime > switchDelay) {
-                            currentVideoIndex = (currentVideoIndex + 1) % videos.length;
-                            visual.src = '/' + videos[currentVideoIndex] + '.mp4';
-                            visual.loop = false;
-                            visual.muted = true;
-                            
-                            const baseBrightness = 1.2 + (average / 255) * 1.5 * glitchIntensity;
-                            const baseSaturation = 1.0 + (average / 255) * 0.5 * glitchIntensity;
-                            const baseContrast = 1.3 + (average / 255) * 0.7 * glitchIntensity;
-                            
-                            visual.style.filter = `brightness(${baseBrightness}) saturate(${baseSaturation}) contrast(${baseContrast})`;
-                            
-                            if (average > 220 && glitchIntensity > 0.5) {
-                                visual.style.filter = 'brightness(3) saturate(0) contrast(3)';
-                                setTimeout(() => {
-                                    visual.style.filter = `brightness(${baseBrightness}) saturate(${baseSaturation}) contrast(${baseContrast})`;
-                                }, 100);
-                            }
-                            
-                            visual.load();
-                            visual.play().catch(() => {});
-                            lastSwitchTime = now;
-                        }
-                        
-                        animationFrameId = requestAnimationFrame(analyzeAndSwitch);
-                    }
-                }
-                
-                analyzeAndSwitch();
-                
-                audio.onended = () => {
-                    returnToIdle();
-                };
-            };
-            
-            audio.play();
+                input.focus();
+            }
         }
     </script>
 </body>
