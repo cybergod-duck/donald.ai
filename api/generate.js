@@ -1,5 +1,3 @@
-
-generate_CLEAN.js
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).send('Method Not Allowed');
@@ -11,7 +9,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Prompt required - at least 5 chars!' });
     }
 
-    // Step 1: Generate text with Groq
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: { 
@@ -32,7 +29,6 @@ export default async function handler(req, res) {
     const text = gData?.choices?.[0]?.message?.content;
     if (!text) throw new Error('No content from Groq');
 
-    // Step 2: Generate audio with ElevenLabs
     const elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${process.env.ELEVENLABS_VOICE_ID}?output_format=mp3_44100_128`, {
       method: "POST",
       headers: { 
@@ -49,12 +45,11 @@ export default async function handler(req, res) {
     if (!elevenRes.ok) throw new Error(`ElevenLabs error: ${elevenRes.status}`);
     const audioBuffer = await elevenRes.arrayBuffer();
 
-    // Return audio (no visemes - using audio-reactive lip sync instead)
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({
       audio: Buffer.from(audioBuffer).toString('base64'),
-      visemes: [] // Empty - frontend will use audio-reactive sync
+      visemes: []
     });
 
   } catch (e) {
@@ -62,3 +57,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: e.message });
   }
 }
+
