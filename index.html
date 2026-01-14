@@ -5,15 +5,19 @@
     <title>DON.AI | CYBERTRUMP</title>
     <style>
         body { background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        #frame { width: 800px; height: 450px; border: 2px solid #0f0; position: relative; background: #000; box-shadow: 0 0 20px #0f0; }
-        #visual { width: 100%; height: 100%; object-fit: cover; }
+        #frame { width: 800px; height: 450px; border: 2px solid #0f0; position: relative; background: #000; box-shadow: 0 0 20px #0f0; transition: box-shadow 0.3s; }
+        #frame:hover { box-shadow: 0 0 40px #0f0; }
+        #visual { width: 100%; height: 100%; object-fit: cover; transition: transform 0.1s ease-out; }
         
         #frame::after { 
             content: " "; position: absolute; top: 0; left: 0; bottom: 0; right: 0; 
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); 
             z-index: 50; background-size: 100% 2px, 3px 100%; 
             pointer-events: none;
+            transition: opacity 0.3s;
         }
+        
+        #frame:hover::after { opacity: 1.5; }
         
         #load-bar { position: absolute; top: 0; left: 0; width: 0%; height: 4px; background: #0f0; box-shadow: 0 0 10px #0f0; transition: width 0.3s; z-index: 100; }
         #terminal { width: 800px; margin-top: 15px; border: 1px solid #0f0; padding: 10px; background: #000; cursor: text; }
@@ -24,6 +28,37 @@
         #title h1 { font-size: 3rem; color: #0066cc; text-shadow: 0 0 15px #0066cc, 0 0 30px #0066cc, 0 0 45px rgba(0, 102, 204, 0.5); margin: 0; font-weight: bold; }
         #title p { font-size: 1.2rem; color: #ffffff; margin: 35px 0 0 0; opacity: 0.9; }
         
+        #quick-prompts { 
+            display: flex; 
+            gap: 10px; 
+            margin-top: 15px; 
+            justify-content: center; 
+        }
+        
+        .prompt-btn { 
+            background: transparent; 
+            border: 1px solid #0f0; 
+            color: #0f0; 
+            padding: 8px 16px; 
+            font-family: 'Courier New', monospace; 
+            font-size: 0.9rem; 
+            cursor: pointer; 
+            transition: all 0.2s;
+            box-shadow: 0 0 5px #0f0;
+        }
+        
+        .prompt-btn:hover { 
+            background: #0f0; 
+            color: #000; 
+            box-shadow: 0 0 20px #0f0;
+            transform: translateY(-2px);
+        }
+        
+        .prompt-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 0 10px #0f0;
+        }
+        
         @keyframes g { 0% { transform: translate(2px, 1px); } 50% { transform: translate(-2px, -1px); } 100% { transform: translate(0); } }
         
         @keyframes flash-white { 
@@ -32,25 +67,41 @@
             100% { filter: brightness(1); } 
         }
         
+        @keyframes breathe {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        .breathing { animation: breathe 4s ease-in-out infinite; }
         .flash-transition { animation: flash-white 0.4s ease-out; }
     </style>
 </head>
-<body onclick="document.getElementById('cmd').focus(); startAmbient();">
+<body onclick="startAmbient();">
     <div id="title">
         <h1>Donald.AI</h1>
         <p>Have Trump give you a speech about anything you want</p>
     </div>
     <div id="frame">
         <div id="load-bar"></div>
-        <video id="visual" src="/6.mp4" muted autoplay loop playsinline></video>
+        <video id="visual" src="/6.mp4" muted autoplay loop playsinline class="breathing"></video>
     </div>
     <div id="terminal">
         <span>> </span><input type="text" id="cmd" placeholder="ASK TRUMP ANYTHING..." autocomplete="off">
     </div>
+    
+    <div id="quick-prompts">
+        <button class="prompt-btn" data-prompt="Tell me about America">🇺🇸 AMERICA</button>
+        <button class="prompt-btn" data-prompt="Give me business advice">💼 BUSINESS</button>
+        <button class="prompt-btn" data-prompt="Motivate me to win">🏆 WINNING</button>
+        <button class="prompt-btn" data-prompt="Talk about your greatest achievements">⭐ GREATEST</button>
+    </div>
 
-    <!-- Ambient background drone audio -->
     <audio id="ambient" loop>
-        <source src="/ambient-drone.mp3" type="audio/mpeg">
+        <source src="/drone.mp3" type="audio/mpeg">
+    </audio>
+    
+    <audio id="click-sound">
+        <source src="/click.mp3" type="audio/mpeg">
     </audio>
 
     <script>
@@ -58,21 +109,126 @@
         const visual = document.getElementById('visual');
         const bar = document.getElementById('load-bar');
         const ambient = document.getElementById('ambient');
+        const clickSound = document.getElementById('click-sound');
+        const frame = document.getElementById('frame');
+        const promptButtons = document.querySelectorAll('.prompt-btn');
         
         let ambientStarted = false;
+        let isIdle = true;
+        let audioContext = null;
+        let analyser = null;
+        let animationFrameId = null;
 
         input.focus();
         
-        // Start ambient sound on first user interaction
         function startAmbient() {
             if (!ambientStarted) {
-                ambient.volume = 0.3; // Low volume for background
+                ambient.volume = 0.3;
                 ambient.play().catch(() => {});
                 ambientStarted = true;
             }
         }
+        
+        // Create Web Audio API context and reverb
+        function createAudioWithReverb(audioElement) {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            const source = audioContext.createMediaElementSource(audioElement);
+            const convolver = audioContext.createConvolver();
+            const dryGain = audioContext.createGain();
+            const wetGain = audioContext.createGain();
+            analyser = audioContext.createAnalyser();
+            
+            // Configure analyser for amplitude detection
+            analyser.fftSize = 256;
+            analyser.smoothingTimeConstant = 0.8;
+            
+            // Create simple reverb impulse response
+            const sampleRate = audioContext.sampleRate;
+            const length = sampleRate * 2; // 2 second reverb
+            const impulse = audioContext.createBuffer(2, length, sampleRate);
+            
+            for (let channel = 0; channel < 2; channel++) {
+                const channelData = impulse.getChannelData(channel);
+                for (let i = 0; i < length; i++) {
+                    channelData[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2);
+                }
+            }
+            convolver.buffer = impulse;
+            
+            // Routing: source -> dry (direct) and wet (reverb)
+            dryGain.gain.value = 0.7; // 70% dry signal
+            wetGain.gain.value = 0.5; // 50% reverb
+            
+            source.connect(dryGain);
+            source.connect(convolver);
+            convolver.connect(wetGain);
+            
+            dryGain.connect(analyser);
+            wetGain.connect(analyser);
+            analyser.connect(audioContext.destination);
+            
+            return source;
+        }
+        
+        // Mouse-following effect for idle video
+        frame.addEventListener('mousemove', (e) => {
+            if (isIdle && visual.src.includes('/6.mp4')) {
+                const rect = frame.getBoundingClientRect();
+                const x = (e.clientX - rect.left) / rect.width - 0.5;
+                const y = (e.clientY - rect.top) / rect.height - 0.5;
+                
+                const rotateX = y * 3;
+                const rotateY = x * -3;
+                
+                visual.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+            }
+        });
+        
+        frame.addEventListener('mouseleave', () => {
+            if (isIdle) {
+                visual.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
+            }
+        });
+        
+        input.addEventListener('mouseenter', () => {
+            if (isIdle && visual.src.includes('/6.mp4')) {
+                visual.style.filter = 'brightness(1.2)';
+            }
+        });
+        
+        input.addEventListener('mouseleave', () => {
+            if (isIdle && visual.src.includes('/6.mp4')) {
+                visual.style.filter = '';
+            }
+        });
+        
+        setInterval(() => {
+            if (isIdle && visual.src.includes('/6.mp4')) {
+                visual.style.opacity = '0.7';
+                setTimeout(() => {
+                    visual.style.opacity = '1';
+                }, 80);
+            }
+        }, Math.random() * 8000 + 5000);
 
-        // Add strobe glitch effect near end of idle video loop
+        promptButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                clickSound.currentTime = 0;
+                clickSound.volume = 0.5;
+                clickSound.play().catch(() => {});
+                
+                const prompt = btn.getAttribute('data-prompt');
+                input.value = prompt;
+                
+                setTimeout(() => {
+                    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+                }, 100);
+            });
+        });
+
         let strobeActive = false;
         visual.addEventListener('timeupdate', () => {
             if (visual.src.includes('/6.mp4') && visual.duration > 0) {
@@ -95,21 +251,24 @@
 
         input.onkeydown = async (e) => {
             if (e.key === 'Enter') {
-                startAmbient(); // Ensure ambient is playing
+                startAmbient();
                 
                 const prompt = input.value.trim();
                 if (!prompt) return;
 
+                isIdle = false;
+                visual.classList.remove('breathing');
+                
                 input.value = "";
                 input.style.opacity = "0.3"; 
                 bar.style.width = "30%";
                 
-                // DRAMATIC WHITE FLASH TRANSITION
                 visual.classList.add('flash-transition');
+                visual.style.transform = '';
+                visual.style.filter = '';
                 setTimeout(() => visual.classList.remove('flash-transition'), 400);
 
                 try {
-                    // Fetch audio
                     const res = await fetch('/api/generate', { 
                         method: 'POST', 
                         headers: { 'Content-Type': 'application/json' }, 
@@ -120,50 +279,77 @@
                     
                     const blob = await res.blob();
                     const audio = new Audio(URL.createObjectURL(blob));
+                    
+                    // Apply reverb and setup analyser
+                    createAudioWithReverb(audio);
 
                     audio.onplay = () => {
                         bar.style.width = "0%";
-                        
-                        // Lower ambient volume during speech
                         ambient.volume = 0.1;
                         
-                        let count = 0;
+                        // AMPLITUDE-REACTIVE VIDEO ANIMATION
+                        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                        let lastSwitchTime = 0;
+                        let currentVideoIndex = 0;
+                        const videos = [1, 2, 3];
                         
-                        // Start random video rotation with glitch effects
-                        const shuffle = () => {
-                            const randomVideo = Math.floor(Math.random() * 3) + 1; // Videos 1-3
-                            visual.src = '/' + randomVideo + '.mp4';
-                            visual.loop = false;
-                            visual.muted = true;
-                            
-                            // Add white strobe flash every 3rd switch
-                            if (count % 3 === 0) {
-                                visual.style.filter = 'brightness(2.5) saturate(0) contrast(2)';
-                                setTimeout(() => {
-                                    visual.style.filter = 'brightness(1.3) saturate(1.2) contrast(1.5)';
-                                }, 150);
-                            } else {
-                                visual.style.filter = 'brightness(1.3) saturate(1.2) contrast(1.5)';
+                        function analyzeAndSwitch() {
+                            if (!audio.paused) {
+                                analyser.getByteFrequencyData(dataArray);
+                                
+                                // Calculate average amplitude
+                                let sum = 0;
+                                for (let i = 0; i < dataArray.length; i++) {
+                                    sum += dataArray[i];
+                                }
+                                const average = sum / dataArray.length;
+                                
+                                // Map amplitude to video switching speed (50-200 = slow, 200+ = fast)
+                                const now = Date.now();
+                                const switchDelay = average < 150 ? 3000 : average < 200 ? 1500 : 800;
+                                
+                                if (now - lastSwitchTime > switchDelay) {
+                                    currentVideoIndex = (currentVideoIndex + 1) % videos.length;
+                                    visual.src = '/' + videos[currentVideoIndex] + '.mp4';
+                                    visual.loop = false;
+                                    visual.muted = true;
+                                    
+                                    // Map amplitude to visual intensity
+                                    const brightness = 1.2 + (average / 255) * 1.5; // 1.2 to 2.7
+                                    const saturation = 1.0 + (average / 255) * 0.5; // 1.0 to 1.5
+                                    const contrast = 1.3 + (average / 255) * 0.7; // 1.3 to 2.0
+                                    
+                                    visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
+                                    
+                                    // Extra flash on very loud moments
+                                    if (average > 220) {
+                                        visual.style.filter = 'brightness(3) saturate(0) contrast(3)';
+                                        setTimeout(() => {
+                                            visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
+                                        }, 100);
+                                    }
+                                    
+                                    visual.load();
+                                    visual.play().catch(() => {});
+                                    lastSwitchTime = now;
+                                }
+                                
+                                animationFrameId = requestAnimationFrame(analyzeAndSwitch);
                             }
-                            
-                            visual.load();
-                            visual.play().catch(() => {});
-                            count++;
-                        };
+                        }
                         
-                        const glitchInterval = setInterval(shuffle, 3000);
-                        shuffle(); // Start immediately
+                        analyzeAndSwitch();
                         
-                        // Return to idle when audio ends
                         audio.onended = () => {
-                            clearInterval(glitchInterval);
-                            
-                            // Restore ambient volume
+                            cancelAnimationFrame(animationFrameId);
+                            isIdle = true;
                             ambient.volume = 0.3;
                             
                             visual.src = "/6.mp4";
                             visual.loop = true;
                             visual.style.filter = '';
+                            visual.style.transform = '';
+                            visual.classList.add('breathing');
                             visual.load();
                             visual.play().catch(() => {});
                             input.style.opacity = "1";
@@ -176,10 +362,13 @@
                 } catch (err) {
                     console.error(err);
                     alert("CONNECTION ERROR");
+                    isIdle = true;
                     ambient.volume = 0.3;
                     visual.src = "/6.mp4";
                     visual.loop = true;
                     visual.style.filter = '';
+                    visual.style.transform = '';
+                    visual.classList.add('breathing');
                     visual.load();
                     visual.play().catch(() => {});
                     input.style.opacity = "1";
