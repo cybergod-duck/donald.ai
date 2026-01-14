@@ -67,7 +67,7 @@
             <div id="load-progress"></div>
         </div>
         <div id="load-text">GENERATING SPEECH...</div>
-        <video id="visual" src="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/idle.mp4" muted autoplay loop playsinline></video>
+        <video id="visual" muted loop playsinline preload="auto"></video>
     </div>
     <div id="terminal">
         <span>> </span><input type="text" id="cmd" placeholder="ASK TRUMP ANYTHING..." autocomplete="off">
@@ -75,16 +75,16 @@
 
     <button id="random-btn">🎲 RANDOM SPEECH</button>
 
-    <audio id="ambient" loop autoplay>
-        <source src="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/drone.mp3" type="audio/mpeg">
+    <audio id="ambient" loop>
+        <source src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/drone.mp3" type="audio/mpeg">
     </audio>
 
     <audio id="click-sound">
-        <source src="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/click.mp3" type="audio/mpeg">
+        <source src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/click.mp3" type="audio/mpeg">
     </audio>
 
     <script>
-        const GITHUB_BASE = "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/";
+        const GITHUB_BASE = "https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/";
 
         const input = document.getElementById('cmd');
         const visual = document.getElementById('visual');
@@ -141,6 +141,25 @@
           26: [1, 2],
           27: [1, 2]
         };
+
+        // Load and autoplay idle video
+        function loadIdleVideo() {
+            visual.src = GITHUB_BASE + "idle.mp4";
+            visual.load();
+            visual.play().catch(err => {
+                console.log('Autoplay blocked, waiting for user interaction');
+                // Try again on first click
+                document.body.addEventListener('click', () => {
+                    visual.play().catch(() => {});
+                    ambient.play().catch(() => {});
+                }, { once: true });
+            });
+        }
+
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadIdleVideo();
+        });
 
         ambient.volume = 0.3;
         ambient.play().catch(() => {
@@ -327,10 +346,7 @@
                     visual.load();
                     visual.play().catch(() => {});
                     visual.onended = () => {
-                        visual.src = GITHUB_BASE + "idle.mp4";
-                        visual.loop = true;
-                        visual.load();
-                        visual.play().catch(() => {});
+                        loadIdleVideo();
                         input.disabled = false;
                         input.focus();
                     };
