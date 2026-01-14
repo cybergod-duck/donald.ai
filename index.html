@@ -77,15 +77,15 @@
                 bar.style.width = "30%";
                 visual.classList.add('glitch');
 
-                // STEP 1: Play 0.mp4 heavy glitch for 1 second
+                // STEP 1: Play 0.mp4 heavy glitch for 0.5 seconds
                 visual.src = '/0.mp4';
                 visual.loop = false;
                 visual.muted = true;
                 visual.style.filter = 'brightness(2.5) contrast(2.5) saturate(3)';
                 visual.load();
-                visual.play();
+                visual.play().catch(() => {}); // Prevent play() errors
                 
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, 500));
 
                 try {
                     // STEP 2: Fetch audio
@@ -125,7 +125,7 @@
                             }
                             
                             visual.load();
-                            visual.play();
+                            visual.play().catch(() => {});
                             count++;
                         };
                         
@@ -139,7 +139,7 @@
                             visual.loop = true;
                             visual.style.filter = '';
                             visual.load();
-                            visual.play();
+                            visual.play().catch(() => {});
                             input.style.opacity = "1";
                             input.focus();
                         };
@@ -155,7 +155,7 @@
                     visual.loop = true;
                     visual.style.filter = '';
                     visual.load();
-                    visual.play();
+                    visual.play().catch(() => {});
                     input.style.opacity = "1";
                     bar.style.width = "0%";
                     input.focus();
@@ -165,4 +165,3 @@
     </script>
 </body>
 </html>
-
