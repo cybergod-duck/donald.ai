@@ -50,12 +50,13 @@
 
         #keyboard-hint {
             position: absolute;
-            bottom: 45px;
+            bottom: 80px;
             left: 50%;
             transform: translateX(-50%);
             color: #0066cc;
-            font-size: 1.1rem;
-            opacity: 0.7;
+            font-size: 1.3rem;
+            text-shadow: 0 0 15px #0066cc, 0 0 30px #0066cc, 0 0 45px rgba(0, 102, 204, 0.5);
+            opacity: 0.9;
             text-align: center;
             z-index: 100;
         }
@@ -158,12 +159,14 @@
             "Talk about being a winner"
         ];
 
+        // Expanded video assignments assuming 1-14 exist; distributed for more variety
+        // Adjust these numbers based on which clips best match each mouth shape
         const mouthShapes = {
-            wide_open: [10, 11, 15],
-            open: [8, 9, 23],
-            narrow: [4, 5],
-            closed: [6, 7, 13, 2],
-            neutral: [1, 2, 3, 12, 14]
+            wide_open: [8, 9, 10, 11, 12, 13, 14],    // More options for expressive talking
+            open: [5, 6, 7, 8, 9],
+            narrow: [3, 4, 5],
+            closed: [1, 2, 3],
+            neutral: [1, 2, 3, 4, 5, 6, 7]           // Fallback with variety
         };
 
         const systemPrompt = "You are Donald Trump. Respond in first person as if giving a speech in your characteristic style: boastful, repetitive, with tangents, and using phrases like 'believe me,' 'tremendous,' 'the best.' Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character.";
@@ -412,11 +415,12 @@
                         const midFreq = freqData.slice(8, 32).reduce((a, b) => a + b, 0) / 24;
                         const highFreq = freqData.slice(32, 64).reduce((a, b) => a + b, 0) / 32;
 
-                        if (volume < 5) return 'closed';
-                        if (lowFreq > 80 && volume > 15) return 'wide_open';
-                        if (midFreq > 60 && volume > 10) return 'open';
-                        if (highFreq > 50 && midFreq < 50) return 'narrow';
-                        if (volume < 10) return 'closed';
+                        // Adjusted thresholds for more frequent shape changes and variety
+                        if (volume < 8) return 'closed';
+                        if (lowFreq > 70 && volume > 12) return 'wide_open';
+                        if (midFreq > 50 && volume > 8) return 'open';
+                        if (highFreq > 45 && midFreq < 55) return 'narrow';
+                        if (volume < 12) return 'closed';
 
                         return 'neutral';
                     }
@@ -441,31 +445,28 @@
                             const now = Date.now();
                             const mouthShape = getSmartMouthShape(frequencyData, timeData);
 
-                            // Only switch if enough time has passed AND mouth shape changed
-                            if ((mouthShape !== currentMouthShape && now - lastSwitchTime > 600) || 
-                                now - lastSwitchTime > 1500) {
+                            // Increased timing for smoother flow, less rapid flashing
+                            // Switch on shape change after 800ms, or force switch after 2000ms
+                            if ((mouthShape !== currentMouthShape && now - lastSwitchTime > 800) || 
+                                now - lastSwitchTime > 2000) {
 
                                 const videoOptions = mouthShapes[mouthShape];
 
-                                // Filter out recently used videos
-                                let availableVideos = videoOptions.filter(v => !videoHistory.includes(v));
+                                // Use history to prevent immediate repeats but allow more variety
+                                let availableVideos = videoOptions.filter(v => v !== lastVideoNum);
                                 if (availableVideos.length === 0) {
                                     availableVideos = videoOptions;
-                                    videoHistory = [];
                                 }
 
-                                // Pick a random video from available options
                                 const videoNum = availableVideos[Math.floor(Math.random() * availableVideos.length)];
 
-                                // Don't repeat the same video twice
-                                if (videoNum !== lastVideoNum) {
-                                    switchVideo(videoNum);
-                                    lastVideoNum = videoNum;
-                                    videoHistory.push(videoNum);
-                                    if (videoHistory.length > 5) videoHistory.shift();
-                                    currentMouthShape = mouthShape;
-                                    lastSwitchTime = now;
-                                }
+                                switchVideo(videoNum);
+                                lastVideoNum = videoNum;
+                                // Keep history but make it shorter for more rotation
+                                videoHistory.push(videoNum);
+                                if (videoHistory.length > 3) videoHistory.shift();
+                                currentMouthShape = mouthShape;
+                                lastSwitchTime = now;
                             }
 
                             animationFrameId = requestAnimationFrame(syncLipSync);
