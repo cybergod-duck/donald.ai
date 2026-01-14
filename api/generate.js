@@ -8,8 +8,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Prompt required - between 5 and 2000 characters!' });
     }
 
-    // Updated system prompt with NSFW and instructions to insert SSML-like tags for inflections/sound effects
-    const systemPrompt = "You are Donald Trump. Respond in first person as if giving a speech in your characteristic style: boastful, repetitive, with tangents, and using phrases like 'believe me,' 'tremendous,' 'the best.' Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character. Keep it natural and conversational. To make the speech more dynamic, insert SSML tags for effects like [crowd cheers] frequently (e.g., after boasts or key points), [laughs], [smirks], [pauses dramatically], or other inflections where appropriate.";
+    // System prompt: Strictly use only supported v3 tags to avoid literal readout
+    const systemPrompt = "You are Donald Trump. Respond in first person as if giving a speech in your characteristic style: boastful, repetitive, with tangents, and using phrases like 'believe me,' 'tremendous,' 'the best.' Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character. Keep it natural and conversational. To add dynamic effects, frequently insert ONLY these supported audio tags where they fit: [laughs] for humor, [sarcastic] for smirking/sarcasm, [excited] for happy/energetic moments, [applause] or [clapping] for crowd cheers after big statements, [sighs] for pauses, [whispers] for emphasis, [gasp] for surprise. Do NOT use unsupported tags like [smirks], [happy], or [crowd cheers]—they will be spoken literally. Use tags sparingly but effectively.";
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
@@ -23,8 +23,8 @@ export default async function handler(req, res) {
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt }
         ],
-        max_tokens: 1024,  // Adjustable for longer responses
-        temperature: 0.8   // For more varied tangents
+        max_tokens: 1024,
+        temperature: 0.8
       })
     });
 
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         text,
-        model_id: "eleven_turbo_v2",  // Switched to turbo v2 for better support of SSML/inflection tags and faster generation
+        model_id: "eleven_v3",  // v3 for tag interpretation
         voice_settings: { stability: 0.75, similarity_boost: 0.85 }
       })
     });
@@ -55,7 +55,7 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({
       audio: Buffer.from(audioBuffer).toString('base64'),
-      visemes: []  // Placeholder for potential future viseme data
+      visemes: []
     });
   } catch (e) {
     console.error('Generate error:', e.message, e.stack);
