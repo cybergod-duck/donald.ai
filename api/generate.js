@@ -20,7 +20,7 @@ export default async function handler(req, res) {
         model: "llama-3.3-70b-versatile",
         messages: [{ 
           role: "system", 
-          content: `You are Trump AI. 4 paragraphs. Use [laughs], [shouts] tags. Respond to: ${prompt}` 
+          content: `You are Trump AI. 4 paragraphs. Keep it natural and conversational. Respond to: ${prompt}` 
         }]
       })
     });
@@ -44,8 +44,12 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({ 
         text, 
-        model_id: "eleven_turbo_v2_5", 
-                voice_settings: { stability: 0.35, similarity_boost: 0.8, style: 0.5, use_speaker_boost: true }      })
+        model_id: "eleven_monolingual_v1",
+        voice_settings: { 
+          stability: 0.75, 
+          similarity_boost: 0.85
+        }
+      })
     });
 
     if (!elevenRes.ok) {
@@ -62,3 +66,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: e.message });
   }
 }
+
