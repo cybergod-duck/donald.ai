@@ -56,17 +56,21 @@
                     audio.onplay = () => {
                         bar.style.width = "0%";
                         visual.classList.remove('glitch');
-                        const shuffle = () => {
-                            if (!audio.paused) {
-                                visual.src = `$/public/videos/{Math.floor(Math.random() * 5) + 1}..mp4`;
-                                visual.onended = shuffle;
-                            }
-                        };
-                        shuffle();
-                        audio.onended = () => { 
-                            visual.src = "/public/videos/6.mp4"; 
-                            input.style.opacity = "1";
+                                    let glitchInterval;
+                const shuffle = () => {
+                    const randomVideo = Math.floor(Math.random() * 5) + 1;
+                    visual.src = '/' + randomVideo + '.mp4';
+                };
+                
+                // Start glitching effect - rapidly switch videos
+                glitchInterval = setInterval(shuffle, 150); // Change video every 150ms
+                shuffle(); // Start immediately
+                
+                audio.onended = () => {
+                    clearInterval(glitchInterval); // Stop glitching
+                    visual.src = "/6.mp4"; // Return to idle video        input.style.opacity = "1";
                             input.focus(); 
+                                                input.style.opacity = "1";
                         };
                     };
                     audio.play();
