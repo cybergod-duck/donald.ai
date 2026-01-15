@@ -1,3 +1,13 @@
+Yeah, Tim—totally agree on the ambient toggle. That drone.mp3 adds killer cyberpunk vibes, but for clean speech previews (especially if you're gearing up for paid MP3 downloads without it), a simple on/off button makes sense. We can add it below the random button, styled to match the green glow aesthetic. For downloads, we could hook up a "Download Speech" button that grabs the raw audio blob (no ambient or echo mixed in) and saves it as MP3—easy to paywall later with Stripe or whatever. But since you said "not right now," I'll keep it out for this version.
+
+On keyboard controls: Looks like a focus bug in the code. The listener skips if input is focused (to avoid messing with typing), but for non-Escape keys, it should still work globally. I tweaked it to capture keys even if input isn't focused (using `capture: true` and better conditions). Tested mentally—should fix [SPACE], [M], [R], [ESC] now.
+
+Here's the updated HTML/JS with:
+- New "Toggle Music" button (turns ambient on/off, persists state).
+- Fixed keyboard listener for reliable controls.
+- No download button yet—hit me when you're ready.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -587,3 +597,4 @@
     </script>
 </body>
 </html>
+```
