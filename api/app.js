@@ -63,7 +63,7 @@ const randomTopics = [
   'rebuilding the U.S. military and veterans care',
   'election integrity and voter ID laws',
   'space exploration and sending Americans to Mars',
-  'education, school choice, and parents' rights',
+  'education, school choice, and parents\' rights',
   'the national debt and government spending',
   'crime, policing, and public safety',
   'infrastructure, roads, and beautiful new airports',

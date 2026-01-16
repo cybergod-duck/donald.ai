@@ -1,113 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DONALD.AI | Voss Neural Research</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DONALD.AI | Presidential Speech Engine</title>
+    
+    <!-- Google Fonts: Share Tech Mono for that "Terminal" look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <!-- CSS Link -->
+    <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
-  <div class="page-shell">
-    <div class="chrome-frame">
-      <div class="chrome-header">
-        <button id="music-toggle" class="music-toggle music-on" aria-label="Toggle background music">
-          <img id="music-icon" src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/note-on.png" alt="Music">
-          <span class="music-indicator music-on"></span>
-        </button>
-        <div class="chrome-title">DONALD.AI // PRESIDENTIAL SPEECH ENGINE</div>
-        <div class="chrome-status">
-          <span class="status-dot"></span> LIVE
-        </div>
-      </div>
 
-      <div class="title-block">
-        <h1>Donald.AI</h1>
-      </div>
+    <!-- 1. HEADER (Moved up a smidge via CSS) -->
+    <header class="site-header">
+        <h1 class="brand-title">DONALD<span class="highlight">.AI</span></h1>
+    </header>
 
-      <div class="layout-row">
-        <aside class="side-rail left-rail">
-          <div class="side-card">
-            <h2>Account</h2>
-            <p>Sign in to save favorites and manage your speeches. (Coming soon.)</p>
-            <button class="ghost-btn" disabled>Sign in / Create account</button>
-          </div>
-          <div class="side-card lower-side-card">
-            <h2>Downloads</h2>
-            <p>Download speeches as clean audio, without background music. (Placeholder.)</p>
-            <button class="ghost-btn" disabled>Download last speech</button>
-          </div>
+    <!-- 2. MAIN LAYOUT (3 Columns) -->
+    <div class="app-layout">
+        
+        <!-- LEFT COLUMN: Controls -->
+        <aside class="side-column left-panel">
+            <div class="panel-box">
+                <h2>CONTROLS</h2>
+                <div class="control-grid">
+                    <button id="btn-random" class="metal-btn">
+                        <span class="btn-icon">🎲</span> RANDOM TOPIC
+                    </button>
+                    <button id="btn-clear" class="metal-btn">
+                        <span class="btn-icon">✖</span> CLEAR
+                    </button>
+                    <button id="btn-download" class="metal-btn">
+                        <span class="btn-icon">⬇</span> DOWNLOAD MP3
+                    </button>
+                </div>
+            </div>
+            
+            <div class="panel-box status-box">
+                <h3>SYSTEM STATUS</h3>
+                <div class="status-row"><span class="label">ENGINE:</span> <span class="value online">ONLINE</span></div>
+                <div class="status-row"><span class="label">LATENCY:</span> <span class="value">24ms</span></div>
+                <div class="status-row"><span class="label">CREDITS:</span> <span class="value">UNLIMITED</span></div>
+            </div>
         </aside>
 
+        <!-- CENTER COLUMN: Video & Input -->
         <main class="center-column">
-          <div class="frame" id="frame">
-            <div class="frame-inner-border"></div>
-            <div id="load-bar">
-              <div id="load-progress"></div>
-            </div>
-            <div id="load-text">GENERATING PRESIDENTIAL REMARKS...</div>
-            <video id="visual" muted loop playsinline preload="auto"></video>
             
-            <!-- Overlay text positioned over video -->
-            <div class="video-overlay">
-              <p class="overlay-subtitle">Type a topic. Hear the speech.</p>
-              <div class="subtitle-chip">
-                <span>VOICE MODEL:</span> 45TH PRESIDENT
-              </div>
-            </div>
-          </div>
+            <!-- VIDEO FRAME -->
+            <div class="frame" id="frame">
+                <div class="frame-inner-border"></div>
+                
+                <!-- Loading Animation Elements -->
+                <div id="load-bar"><div id="load-progress"></div></div>
+                <div id="load-text">GENERATING PRESIDENTIAL REMARKS...</div>
 
-          <div class="input-controls-block">
-            <div id="terminal">
-              <span>&gt;</span>
-              <input type="text" id="cmd" placeholder="give a speech on...">
+                <!-- VIDEO PLAYER (Fixed: Added source, autoplay, muted) -->
+                <video id="visual" class="video-feed" autoplay loop muted playsinline preload="auto">
+                    <!-- This path points to the file we moved earlier -->
+                    <source src="assets/videos/special/idle.mp4" type="video/mp4">
+                </video>
+                
+                <!-- OVERLAY TEXT (Fixed: Positioned at bottom) -->
+                <div class="video-overlay screen-overlay-bottom">
+                    <p class="overlay-subtitle instruction-text">Type a topic. Hear the speech.</p>
+                    <div class="subtitle-chip model-status">
+                        <span>VOICE MODEL:</span> 45TH PRESIDENT
+                    </div>
+                </div>
             </div>
-            <div class="control-buttons">
-              <button id="pause-btn" class="control-button" aria-label="Pause / resume speech">
-                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/pause.png" alt="Pause">
-              </button>
-              <button id="mute-btn" class="control-button" aria-label="Mute speech audio">
-                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/mute.png" alt="Mute">
-              </button>
-              <button id="lightning-btn" class="control-button" aria-label="Flash effect">
-                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/create.png" alt="Flash">
-              </button>
-              <button id="dice-btn" class="control-button" aria-label="Random topic">
-                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/random.png" alt="Random topic">
-              </button>
-              <button id="stop-btn" class="control-button" aria-label="Stop speech">
-                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/stop.png" alt="Stop">
-              </button>
+
+            <!-- INPUT TERMINAL -->
+            <div class="input-controls-block">
+                <div id="terminal">
+                    <span class="prompt-char">&gt;</span>
+                    <input type="text" id="topic-input" placeholder="ENTER TOPIC HERE..." autocomplete="off">
+                    <button id="btn-generate" class="submit-btn">SPEAK</button>
+                </div>
             </div>
-          </div>
         </main>
 
-        <aside class="side-rail right-rail">
-          <div class="side-card compact-card">
-            <h2>Quick guide</h2>
-            <ul>
-              <li><span class="side-bullet"></span>Type any topic.</li>
-              <li><span class="side-bullet"></span>Press Enter or use the dice.</li>
-              <li><span class="side-bullet"></span>Let him talk.</li>
-            </ul>
-          </div>
-          <div class="side-card transcript-card lower-side-card">
-            <h2>Transcript</h2>
-            <div id="transcript" class="transcript-body">
-              <span class="transcript-placeholder">Your speech text will appear here.</span>
+        <!-- RIGHT COLUMN: Transcript -->
+        <aside class="side-column right-panel">
+            <div class="panel-box transcript-box">
+                <h2>LIVE TRANSCRIPT</h2>
+                <div id="transcript" class="transcript-content">
+                    <span class="placeholder-text">Waiting for input...</span>
+                </div>
             </div>
-          </div>
         </aside>
-      </div>
+
     </div>
-  </div>
 
-  <footer class="site-footer">
-    <span>Certified by <span class="brand-white">Simple As That</span></span>
-  </footer>
+    <!-- 3. FOOTER -->
+    <footer class="site-footer">
+        <span>Certified by <span class="brand-white">Simple As That</span></span>
+    </footer>
 
-  <script src="app.js"></script>
+    <!-- JS Link -->
+    <script src="assets/js/app.js"></script>
 </body>
 </html>
