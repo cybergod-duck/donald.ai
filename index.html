@@ -3,101 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DONALD.AI | Presidential Speech Engine</title>
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-    
-    <!-- CSS Link (Clean Path) -->
+    <title>DONALD.AI</title>
     <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
-
-    <!-- HEADER -->
-    <header class="site-header">
-        <h1 class="brand-title">DONALD<span class="highlight">.AI</span></h1>
-    </header>
-
-    <!-- MAIN LAYOUT -->
-    <div class="app-layout">
-        
-        <!-- LEFT COLUMN -->
-        <aside class="side-column left-panel">
-            <div class="panel-box">
-                <h2>CONTROLS</h2>
-                <div class="control-grid">
-                    <button id="btn-random" class="metal-btn">
-                        <span class="btn-icon">🎲</span> RANDOM TOPIC
-                    </button>
-                    <button id="btn-clear" class="metal-btn">
-                        <span class="btn-icon">✖</span> CLEAR
-                    </button>
-                    <button id="btn-download" class="metal-btn">
-                        <span class="btn-icon">⬇</span> DOWNLOAD MP3
-                    </button>
+    <div class="page-shell">
+        <div class="chrome-frame">
+            <!-- Header: Status + Music Toggle -->
+            <div class="chrome-header">
+                <div class="chrome-status">
+                    <span class="status-dot"></span>
+                    <span>SYSTEM ONLINE</span>
                 </div>
+                <h1 class="chrome-title">DONALD.AI</h1>
+                <button id="music-toggle" class="music-toggle music-on">
+                    <img id="music-icon" src="assets/images/note-on.png" alt="Music Toggle">
+                    <div class="music-indicator music-on"></div>
+                </button>
             </div>
-            
-            <div class="panel-box status-box">
-                <h3>SYSTEM STATUS</h3>
-                <div class="status-row"><span class="label">ENGINE:</span> <span class="value online">ONLINE</span></div>
-                <div class="status-row"><span class="label">LATENCY:</span> <span class="value">24ms</span></div>
-                <div class="status-row"><span class="label">CREDITS:</span> <span class="value">UNLIMITED</span></div>
-            </div>
-        </aside>
 
-        <!-- CENTER COLUMN -->
-        <main class="center-column">
-            
-            <!-- VIDEO FRAME -->
-            <div class="frame" id="frame">
-                <div class="frame-inner-border"></div>
-                
-                <div id="load-bar"><div id="load-progress"></div></div>
-                <div id="load-text">GENERATING PRESIDENTIAL REMARKS...</div>
-
-                <video id="visual" class="video-feed" autoplay loop muted playsinline preload="auto">
-                    <source src="assets/videos/special/idle.mp4" type="video/mp4">
-                </video>
-                
-                <div class="video-overlay screen-overlay-bottom">
-                    <p class="overlay-subtitle instruction-text">Type a topic. Hear the speech.</p>
-                    <div class="subtitle-chip model-status">
-                        <span>VOICE MODEL:</span> 45TH PRESIDENT
+            <!-- Main 3-Column Layout -->
+            <div class="layout-row">
+                <!-- Left Rail: Pause/Mute/Stop -->
+                <aside class="side-rail">
+                    <div class="side-card compact-card">
+                        <h2>CONTROLS</h2>
+                        <div class="control-buttons" style="flex-direction: column; gap: 12px;">
+                            <button id="pause-btn" class="control-button">
+                                <img src="assets/images/pause.png" alt="Pause">
+                            </button>
+                            <button id="mute-btn" class="control-button">
+                                <img src="assets/images/mute.png" alt="Mute">
+                            </button>
+                            <button id="stop-btn" class="control-button">
+                                <img src="assets/images/stop.png" alt="Stop">
+                            </button>
+                        </div>
                     </div>
-                </div>
-            </div>
+                </aside>
 
-            <!-- INPUT TERMINAL -->
-            <div class="input-controls-block">
-                <div id="terminal">
-                    <span class="prompt-char">&gt;</span>
-                    <input type="text" id="topic-input" placeholder="ENTER TOPIC HERE..." autocomplete="off">
-                    <button id="btn-generate" class="submit-btn">SPEAK</button>
-                </div>
-            </div>
-        </main>
+                <!-- Center: Video + Terminal Input -->
+                <main class="center-column">
+                    <div class="frame" id="frame">
+                        <div id="load-bar"><div id="load-progress"></div></div>
+                        <div id="load-text">GENERATING PRESIDENTIAL REMARKS...</div>
+                        <video id="visual" class="video-feed" autoplay loop muted playsinline preload="auto"></video>
+                        <div class="video-overlay screen-overlay-bottom">
+                            <p class="overlay-subtitle instruction-text">Type a topic. Hear the speech.</p>
+                            <div class="subtitle-chip model-status">
+                                <span>VOICE MODEL:</span> 45TH PRESIDENT
+                            </div>
+                        </div>
+                    </div>
 
-        <!-- RIGHT COLUMN -->
-        <aside class="side-column right-panel">
-            <div class="panel-box transcript-box">
-                <h2>LIVE TRANSCRIPT</h2>
-                <div id="transcript" class="transcript-content">
-                    <span class="placeholder-text">Waiting for input...</span>
-                </div>
-            </div>
-        </aside>
+                    <div class="input-controls-block">
+                        <div id="terminal">
+                            <span class="prompt-char">&gt;</span>
+                            <input type="text" id="cmd" placeholder="ENTER TOPIC HERE..." autocomplete="off">
+                        </div>
+                        <div class="control-buttons">
+                            <button id="lightning-btn" class="control-button">
+                                <img src="assets/images/lightning.png" alt="Flash">
+                            </button>
+                            <button id="dice-btn" class="control-button">
+                                <img src="assets/images/random.png" alt="Random Topic">
+                            </button>
+                        </div>
+                    </div>
+                </main>
 
+                <!-- Right Rail: Transcript -->
+                <aside class="side-rail">
+                    <div class="side-card transcript-card">
+                        <h2>LIVE TRANSCRIPT</h2>
+                        <div id="transcript" class="transcript-body">
+                            <p class="transcript-placeholder">Waiting for input...</p>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </div>
     </div>
 
-    <!-- FOOTER -->
-    <footer class="site-footer">
-        <span>Certified by <span class="brand-white">Simple As That</span></span>
-    </footer>
-
-    <!-- JS Link (Clean Path) -->
     <script src="assets/js/app.js"></script>
 </body>
 </html>
