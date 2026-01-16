@@ -5,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Donald.AI</title>
     <style>
-        * {
-            box-sizing: border-box;
-        }
-
+        * { box-sizing: border-box; }
         body {
             background: #000;
             color: #0f0;
@@ -21,7 +18,6 @@
             margin: 0;
             overflow: hidden;
         }
-
         #frame {
             width: 800px;
             height: 450px;
@@ -33,28 +29,24 @@
             flex-direction: column;
             margin-bottom: 15px;
         }
-
+        #frame-header {
             color: #0f0;
             font-size: 1rem;
             padding: 8px 12px;
             border-bottom: 1px solid #0f0;
-            font-family: 'Courier New', monospace;
+            background: #000;
         }
-
         #visual {
             width: 100%;
             height: 100%;
             object-fit: cover;
             flex: 1;
+            transition: opacity 0.15s ease-in-out;
         }
-
         #frame::after {
             content: '';
             position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
+            top: 0; left: 0; bottom: 0; right: 0;
             background: 
                 linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
                 linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
@@ -62,57 +54,36 @@
             background-size: 100% 2px, 3px 100%;
             pointer-events: none;
         }
-
         .load-bar {
             position: absolute;
-            top: 50%;
-            left: 50%;
+            top: 50%; left: 50%;
             transform: translate(-50%, -50%);
-            width: 60px;
-            height: 8px;
+            width: 60px; height: 8px;
             background: rgba(0, 255, 0, 0.2);
             border: 2px solid #0f0;
             z-index: 100;
             display: none;
         }
-
-        .load-bar.active {
-            display: block;
-        }
-
-        #load-progress {
-            height: 100%;
-            background: #0f0;
-            width: 0;
-            transition: width 0.2s linear;
-            box-shadow: 0 0 20px #0f0;
-        }
-
+        .load-bar.active { display: block; }
+        #load-progress { height: 100%; background: #0f0; width: 0; transition: width 0.2s linear; }
         #load-text {
             position: absolute;
             top: calc(50% - 30px);
             left: 50%;
             transform: translateX(-50%);
             color: #0f0;
-            font-size: 1rem;
             z-index: 100;
             display: none;
             text-shadow: 0 0 10px #0f0;
         }
-
-        #load-text.active {
-            display: block;
-        }
-
+        #load-text.active { display: block; }
         #terminal {
             width: 800px;
             margin-top: 15px;
             border: 1px solid #0f0;
             padding: 10px;
             background: #000;
-            cursor: text;
         }
-
         #cmd {
             background: transparent;
             border: none;
@@ -122,533 +93,181 @@
             outline: none;
             font-family: inherit;
         }
-
-        .title {
-            text-align: center;
-            margin-bottom: 20px;
-            z-index: 100;
-        }
-
         .title h1 {
             font-size: 3rem;
             color: #0066cc;
-            text-shadow: 0 0 15px #0066cc, 0 0 30px #0066cc, 0 0 45px rgba(0, 102, 204, 0.5);
+            text-shadow: 0 0 15px #0066cc;
             margin: 0;
-            font-weight: bold;
+            text-align: center;
         }
-
-        .title p {
-            display: none;
-        }
-
         #random-btn {
             margin-top: 15px;
             background: transparent;
             border: 2px solid #0f0;
             color: #0f0;
             padding: 12px 30px;
-            font-family: 'Courier New', monospace;
-            font-size: 1.1rem;
             cursor: pointer;
-            transition: all 0.2s;
             box-shadow: 0 0 10px #0f0;
         }
-
-        #random-btn:hover {
-            background: #0f0;
-            color: #000;
-            box-shadow: 0 0 30px #0f0;
-            transform: scale(1.05);
-        }
-
-        .keyboard-hint {
-            color: #0066cc;
-            font-size: 1.1rem;
-            text-shadow: 0 0 15px #0066cc, 0 0 30px #0066cc, 0 0 45px rgba(0, 102, 204, 0.5);
-            opacity: 0.95;
-            text-align: center;
-            font-weight: bold;
-            line-height: 1.5;
-            margin-top: 35px;
-            margin-bottom: 35px;
-        }
-
-        #credits {
-            text-align: center;
-            font-size: 0.9rem;
-            margin-top: auto;
-            padding-top: 10px;
-        }
-
-        #credits span:first-child {
-            color: #fff;
-            opacity: 0.7;
-        }
-
-        #credits span:last-child {
-            color: #00bfff;
-            opacity: 0.9;
-            text-shadow: 0 0 10px #00bfff;
-        }
-
+        #random-btn:hover { background: #0f0; color: #000; }
+        .keyboard-hint { color: #0066cc; margin: 20px 0; text-align: center; font-weight: bold; }
         @keyframes flash-white {
             0% { filter: brightness(1); }
-            50% { filter: brightness(5) saturate(0) contrast(3); }
+            50% { filter: brightness(3); }
             100% { filter: brightness(1); }
         }
-
-        .flash-transition {
-            animation: flash-white 0.4s ease-out;
-        }
+        .flash-transition { animation: flash-white 0.4s ease-out; }
     </style>
 </head>
-
 <body>
-    <div class="title">
-        <h1>Donald.AI</h1>
-    </div>
-
+    <div class="title"><h1>Donald.AI</h1></div>
     <div id="frame">
-        <div id="frame-header">Donald.AI will give a speech on anything you want</div>
-        <div class="load-bar" id="load-bar">
-            <div id="load-progress"></div>
-        </div>
-        <div id="load-text">GENERATING SPEECH...</div>
+        <div id="frame-header">Donald.AI Status: STANDBY</div>
+        <div class="load-bar" id="load-bar"><div id="load-progress"></div></div>
+        <div id="load-text">GENERATING...</div>
         <video id="visual" muted loop playsinline preload="auto"></video>
     </div>
-
-    <div id="terminal">
-        <span><input type="text" id="cmd" placeholder="Give a speech on..." autocomplete="off"></span>
-    </div>
-
+    <div id="terminal"><span><input type="text" id="cmd" placeholder="Ask for a speech..." autocomplete="off"></span></div>
     <button id="random-btn">RANDOM SPEECH</button>
+    <div class="keyboard-hint">SPACE: Pause | M: Mute | ESC: Stop</div>
 
-    <div class="keyboard-hint">
-        <b>SPACE</b> Pause/Resume &nbsp; <b>M</b> Mute/Unmute<br>
-        <b>R</b> Random &nbsp; <b>ESC</b> Stop
-    </div>
-
-    <div id="credits">
-        <span>Made by </span><span>Voss Neural Research</span>
-    </div>
-
-    <!-- Audio elements -->
-    <audio id="ambient" loop>
-        <source src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/drone.mp3" type="audio/mpeg">
-    </audio>
-    <audio id="cheers-sound">
-        <source src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/cheers.mp3" type="audio/mpeg">
-    </audio>
-    <audio id="click-sound">
-        <source src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/click.mp3" type="audio/mpeg">
-    </audio>
+    <audio id="ambient" loop src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/drone.mp3"></audio>
+    <audio id="click-sound" src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/click.mp3"></audio>
 
     <script>
         const GITHUB_BASE = 'https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/';
-
-        // DOM elements
         const input = document.getElementById('cmd');
         const visual = document.getElementById('visual');
+        const ambient = document.getElementById('ambient');
         const loadBar = document.getElementById('load-bar');
         const loadProgress = document.getElementById('load-progress');
         const loadText = document.getElementById('load-text');
-        const ambient = document.getElementById('ambient');
-        const cheersSnd = document.getElementById('cheers-sound');
-        const clickSound = document.getElementById('click-sound');
-        const randomBtn = document.getElementById('random-btn');
-
-        // State variables
+        
+        let audioContext, analyser, currentSpeechAudio;
         let isIdle = true;
-        let audioContext = null;
-        let analyser = null;
-        let animationFrameId = null;
-        let progressInterval = null;
-        let ambientStarted = false;
-        let currentSpeechAudio = null;
-        let isMuted = false;
-        let lastVideoFilename = null;
-        let videoHistory = [];
+        let lastVideo = null;
 
-        const randomTopics = [
-            'Tell me about America',
-            'Give me business advice',
-            'Motivate me to win',
-            'Talk about your greatest achievements',
-            'Tell me about success',
-            'What makes America great',
-            'Give me a pep talk',
-            'Talk about being a winner'
-        ];
-
-        // FIXED: Removed idle.mp4 from neutral array - it's only for idle state
         const mouthShapes = {
-            wideopen: ['wide1.mp4', 'wide2.mp4', 'wide3.mp4', 'wide4.mp4', 'wide5.mp4', 'express1.mp4', 'express2.mp4', '1.mp4', '4.mp4', '7.mp4', '8.mp4', '9.mp4', '10.mp4', '11.mp4', '12.mp4', '13.mp4', '14.mp4'],
-            open: ['express3.mp4', 'express4.mp4', 'express5.mp4', '2.mp4', '3.mp4', '5.mp4', '6.mp4'],
-            narrow: ['express6.mp4', '1.mp4', '2.mp4', '3.mp4', '4.mp4', '5.mp4', '6.mp4', '12.mp4'],
+            wideopen: ['wide1.mp4', 'wide2.mp4', 'wide3.mp4', 'wide4.mp4', 'wide5.mp4', 'express1.mp4', 'express2.mp4'],
+            open: ['express3.mp4', 'express4.mp4', 'express5.mp4', '1.mp4', '2.mp4', '7.mp4'],
+            narrow: ['express6.mp4', '3.mp4', '4.mp4', '5.mp4', '6.mp4'],
             closed: ['pause1.mp4', 'pause2.mp4', 'pause3.mp4', 'pause4.mp4', 'pause5.mp4'],
-            // FIXED: Neutral is now a selective fallback without idle.mp4
-            neutral: ['1.mp4', '2.mp4', '3.mp4', '4.mp4', '5.mp4', '6.mp4', '7.mp4', '8.mp4', '9.mp4', '10.mp4', '11.mp4', '12.mp4', '13.mp4', '14.mp4']
+            neutral: ['8.mp4', '9.mp4', '10.mp4', '11.mp4', '12.mp4', '13.mp4', '14.mp4']
         };
 
-        const systemPrompt = 'You are Donald Trump. Respond in first person as if giving a speech in your characteristic style - boastful, repetitive, with tangents, and using phrases like "believe me", "tremendous", "the best". Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character. Include occasional applause and pause tags naturally where Trump would pause for effect or crowd reaction.';
+        const systemPrompt = "You are Donald Trump. Give a short, boastful speech. Use 'tremendous', 'believe me', and 'fake news'.";
 
-        function updateProgress(target, duration = 2000) {
-            if (progressInterval) clearInterval(progressInterval);
-            const current = parseFloat(loadProgress.style.width) || 0;
-            const increment = (target - current) / (duration / 50);
-            progressInterval = setInterval(() => {
-                const currentVal = parseFloat(loadProgress.style.width) || 0;
-                if (currentVal >= target) {
-                    clearInterval(progressInterval);
-                } else {
-                    loadProgress.style.width = Math.min(currentVal + increment, target) + '%';
-                }
-            }, 50);
+        function playRandomCheer() {
+            const cheerNum = Math.floor(Math.random() * 5) + 1;
+            const cheer = new Audio(`${GITHUB_BASE}cheer${cheerNum}.mp3`);
+            cheer.volume = 0.4;
+            cheer.play().catch(() => {});
         }
 
-        function startAmbient() {
-            if (!ambientStarted) {
-                ambient.volume = 0.3;
-                ambient.play().then(() => {
-                    ambientStarted = true;
-                }).catch(() => {});
-            }
-        }
-
-        function stopAmbient() {
-            ambient.pause();
-            ambient.currentTime = 0;
-            ambientStarted = false;
-        }
-
-        // FIXED: Idle video now loops properly
         function loadIdleVideo() {
             visual.src = GITHUB_BASE + 'idle.mp4';
-            visual.loop = true;  // ← FIX: Ensure loop is enabled
-            visual.load();
+            visual.loop = true;
             visual.play().catch(() => {});
         }
 
-        function stopCurrentSpeech() {
-            if (currentSpeechAudio) {
-                currentSpeechAudio.pause();
-                currentSpeechAudio.currentTime = 0;
-                currentSpeechAudio = null;
-            }
-            cancelAnimationFrame(animationFrameId);
-            isIdle = true;
-            stopAmbient();
-            loadIdleVideo();
-            input.disabled = false;
-            input.focus();
-            loadBar.classList.remove('active');
-            loadText.classList.remove('active');
-            lastVideoFilename = null;
-            videoHistory = [];
-        }
-
-        // Keyboard controls
-        document.addEventListener('keydown', (e) => {
-            if (document.activeElement === input && e.key !== 'Escape') return;
-
-            switch (e.key) {
-                case ' ':
-                    e.preventDefault();
-                    if (currentSpeechAudio && !isIdle) {
-                        if (currentSpeechAudio.paused) {
-                            currentSpeechAudio.play();
-                        } else {
-                            currentSpeechAudio.pause();
-                        }
-                    }
-                    break;
-                case 'm':
-                case 'M':
-                    e.preventDefault();
-                    isMuted = !isMuted;
-                    if (currentSpeechAudio) {
-                        currentSpeechAudio.volume = isMuted ? 0 : 1;
-                    }
-                    ambient.volume = isMuted ? 0 : (isIdle ? 0.3 : 0.1);
-                    break;
-                case 'r':
-                case 'R':
-                    if (document.activeElement !== input) {
-                        e.preventDefault();
-                        randomBtn.click();
-                    }
-                    break;
-                case 'Escape':
-                    e.preventDefault();
-                    stopCurrentSpeech();
-                    break;
-            }
-        });
-
-        // Start ambient sound on first interaction
-        window.addEventListener('DOMContentLoaded', loadIdleVideo);
-        ['click', 'keydown'].forEach(event => {
-            document.body.addEventListener(event, startAmbient, { once: true });
-        });
-
-        randomBtn.addEventListener('click', () => {
-            startAmbient();
-            clickSound.currentTime = 0;
-            clickSound.volume = 0.5;
-            clickSound.play().catch(() => {});
-            const randomPrompt = randomTopics[Math.floor(Math.random() * randomTopics.length)];
-            input.value = randomPrompt;
-            setTimeout(processPrompt, 100);
-        });
-
-        function createAudioWithEcho(audioElement) {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            const source = audioContext.createMediaElementSource(audioElement);
-            const delay = audioContext.createDelay();
-            const feedback = audioContext.createGain();
-            const wetGain = audioContext.createGain();
-            const dryGain = audioContext.createGain();
-
-            analyser = audioContext.createAnalyser();
-            analyser.fftSize = 256;
-            analyser.smoothingTimeConstant = 0.6;
-
-            delay.delayTime.value = 0.25;
-            feedback.gain.value = 0.2;
-            wetGain.gain.value = 0.2;
-            dryGain.gain.value = 0.9;
-
-            source.connect(dryGain);
-            source.connect(delay);
-            delay.connect(feedback);
-            feedback.connect(delay);
-            delay.connect(wetGain);
-
-            dryGain.connect(analyser);
-            wetGain.connect(analyser);
-            analyser.connect(audioContext.destination);
-
-            return source;
-        }
-
-        input.onkeydown = async (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                processPrompt();
-            }
-        };
-
         async function processPrompt() {
             const prompt = input.value.trim();
-            if (!prompt) return;
+            if (!prompt || !isIdle) return;
 
             isIdle = false;
-            input.value = '';
             input.disabled = true;
-
             loadBar.classList.add('active');
             loadText.classList.add('active');
-            loadText.textContent = 'CONTACTING AI...';
-            loadProgress.style.width = '0%';
-            updateProgress(15, 500);
-
-            visual.classList.add('flash-transition');
-            setTimeout(() => visual.classList.remove('flash-transition'), 400);
 
             try {
-                loadText.textContent = 'GENERATING TEXT...';
-                updateProgress(30, 1000);
-
                 const res = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt })
+                    body: JSON.stringify({ prompt, fullPrompt: systemPrompt })
                 });
-
-                loadText.textContent = 'CREATING VOICE...';
-                updateProgress(65, 1500);
-
-                if (!res.ok) {
-                    const errorData = await res.json().catch(() => ({}));
-                    throw new Error(errorData.error || `API error: ${res.status}`);
-                }
-
+                
                 const data = await res.json();
-                loadText.textContent = 'LOADING AUDIO...';
-                updateProgress(85, 800);
-
-                let audio;
-                if (data.audio) {
-                    const binaryString = atob(data.audio);
-                    const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                        bytes[i] = binaryString.charCodeAt(i);
-                    }
-                    const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
-                    audio = new Audio(URL.createObjectURL(audioBlob));
-                } else {
-                    audio = new Audio(data.audioUrl);
-                }
-
+                const audioBlob = new Blob([Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
+                const url = URL.createObjectURL(audioBlob);
+                
+                const audio = new Audio(url);
                 currentSpeechAudio = audio;
-                audio.volume = isMuted ? 0 : 1;
-                createAudioWithEcho(audio);
 
-                audio.oncanplaythrough = () => {
-                    loadText.textContent = 'READY TO PLAY...';
-                    updateProgress(100, 300);
-                    setTimeout(() => {
-                        audio.play().catch((e) => {
-                            console.error('Audio play failed:', e);
-                        });
-                        input.disabled = false;
-                        loadBar.classList.remove('active');
-                        loadText.classList.remove('active');
-                    }, 300);
-                };
+                if (!audioContext) {
+                    audioContext = new AudioContext();
+                    analyser = audioContext.createAnalyser();
+                    const source = audioContext.createMediaElementSource(audio);
+                    source.connect(analyser);
+                    analyser.connect(audioContext.destination);
+                }
 
                 audio.onplay = () => {
-                    setTimeout(() => {
-                        loadBar.classList.remove('active');
-                        loadText.classList.remove('active');
-                        loadProgress.style.width = '0%';
-                    }, 300);
-                    startAmbient();
-                    ambient.volume = isMuted ? 0 : 0.1;
+                    loadBar.classList.remove('active');
+                    loadText.classList.remove('active');
+                    ambient.volume = 0.1;
+                    startLipSync();
                 };
 
-                // FIXED: Added pause event listener to trigger cheers on pause
-                audio.onpause = () => {
-                    cheersSnd.currentTime = 0;
-                    cheersSnd.volume = 0.5;
-                    cheersSnd.play().catch(() => {});
-                };
-
-                const frequencyData = new Uint8Array(analyser.frequencyBinCount);
-                const timeData = new Uint8Array(analyser.fftSize);
-                let lastSwitchTime = 0;
-                let currentMouthShape = 'neutral';
-
-                function getSmartMouthShape(freqData, timeData) {
-                    let volumeSum = 0;
-                    for (let i = 0; i < timeData.length; i++) {
-                        volumeSum += Math.abs(timeData[i] - 128);
-                    }
-                    const volume = volumeSum / timeData.length;
-
-                    const lowFreq = freqData.slice(0, 8).reduce((a, b) => a + b, 0) / 8;
-                    const midFreq = freqData.slice(8, 32).reduce((a, b) => a + b, 0) / 24;
-                    const highFreq = freqData.slice(32, 64).reduce((a, b) => a + b, 0) / 32;
-
-                    if (volume < 5) return 'closed';
-                    if (lowFreq > 100 && volume > 20) return 'wideopen';
-                    if (midFreq > 80 && volume > 15) return 'open';
-                    if (highFreq > 60 && midFreq < 60) return 'narrow';
-                    if (volume > 15) return 'closed';
-
-                    return 'neutral';
-                }
-
-                function switchVideo(videoFilename) {
-                    visual.style.opacity = '0';
-                    visual.src = GITHUB_BASE + videoFilename;
-                    visual.loop = false;
-                    visual.muted = true;
-
-                    const brightness = 1.7, saturation = 1.3, contrast = 1.7;
-                    visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
-
-                    visual.load();
-                    visual.onloadedmetadata = () => {
-                        visual.currentTime = Math.random() * visual.duration;
-                        visual.play().catch(() => {});
-                        visual.style.opacity = '1';
-                    };
-                }
-
-                function syncLipSync() {
-                    if (!audio.paused) {
-                        analyser.getByteFrequencyData(frequencyData);
-                        analyser.getByteTimeDomainData(timeData);
-
-                        const now = Date.now();
-                        const mouthShape = getSmartMouthShape(frequencyData, timeData);
-
-                        if (mouthShape !== currentMouthShape && (now - lastSwitchTime > 800 || now - lastSwitchTime > 2000)) {
-                            const videoOptions = mouthShapes[mouthShape];
-                            let availableVideos = videoOptions.filter(v => v !== lastVideoFilename);
-
-                            if (availableVideos.length === 0) {
-                                availableVideos = videoOptions;
-                            }
-
-                            const videoNum = Math.floor(Math.random() * availableVideos.length);
-                            const selectedVideo = availableVideos[videoNum];
-
-                            if (selectedVideo !== lastVideoFilename) {
-                                switchVideo(selectedVideo);
-                                lastVideoFilename = selectedVideo;
-                                videoHistory.push(selectedVideo);
-
-                                if (videoHistory.length > 8) {
-                                    videoHistory.shift();
-                                }
-                            }
-
-                            currentMouthShape = mouthShape;
-                            lastSwitchTime = now;
-                        }
-                    }
-
-                    animationFrameId = requestAnimationFrame(syncLipSync);
-                }
-
-                // FIXED: Properly implemented end.mp4 sequence
+                audio.onpause = () => playRandomCheer();
+                
                 audio.onended = () => {
-                    cancelAnimationFrame(animationFrameId);
                     isIdle = true;
-                    currentSpeechAudio = null;
-                    lastVideoFilename = null;
-                    videoHistory = [];
-
-                    // Load and play end video
-                    visual.src = GITHUB_BASE + 'end.mp4';
-                    visual.loop = false;
-                    visual.muted = true;
-                    visual.style.filter = `brightness(1.7) saturate(1.3) contrast(1.7)`;
-                    visual.load();
-
-                    visual.onended = () => {
-                        console.log('End sequence complete, loading idle');
-                        loadIdleVideo();
-                    };
-
-                    visual.play().catch((err) => {
-                        console.error('end.mp4 failed to play:', err);
-                        // Fallback: go straight to idle if end.mp4 doesn't exist
-                        loadIdleVideo();
-                    });
-
-                    ambient.volume = isMuted ? 0 : 0.3;
                     input.disabled = false;
-                    input.focus();
+                    playRandomCheer();
+                    switchVideo('end.mp4', false);
+                    visual.onended = () => loadIdleVideo();
                 };
 
-                syncLipSync();
-
+                audio.play();
             } catch (e) {
-                console.error('Error:', e);
+                console.error(e);
+                isIdle = true;
                 input.disabled = false;
-                input.focus();
-                loadBar.classList.remove('active');
-                loadText.classList.remove('active');
-                alert(`Failed: ${e.message}`);
             }
         }
+
+        function switchVideo(file, loop = false) {
+            if (lastVideo === file) return;
+            visual.style.opacity = '0.5';
+            setTimeout(() => {
+                visual.src = GITHUB_BASE + file;
+                visual.loop = loop;
+                visual.play();
+                visual.style.opacity = '1';
+                lastVideo = file;
+            }, 50);
+        }
+
+        function startLipSync() {
+            const freqData = new Uint8Array(analyser.frequencyBinCount);
+            let lastSwitch = 0;
+
+            function frame() {
+                if (isIdle || currentSpeechAudio.paused) return;
+                analyser.getByteFrequencyData(freqData);
+                const volume = freqData.reduce((a, b) => a + b) / freqData.length;
+                const now = Date.now();
+
+                if (now - lastSwitch > 250) { // Swaps clips every 250ms for snappier look
+                    let shape = 'neutral';
+                    if (volume < 5) shape = 'closed';
+                    else if (volume > 40) shape = 'wideopen';
+                    else if (volume > 25) shape = 'open';
+                    else if (volume > 10) shape = 'narrow';
+
+                    const options = mouthShapes[shape];
+                    const pick = options[Math.floor(Math.random() * options.length)];
+                    switchVideo(pick);
+                    lastSwitch = now;
+                }
+                requestAnimationFrame(frame);
+            }
+            frame();
+        }
+
+        input.onkeydown = (e) => { if (e.key === 'Enter') processPrompt(); };
+        window.onload = loadIdleVideo;
+        document.body.onclick = () => { ambient.play(); };
     </script>
 </body>
-
 </html>
