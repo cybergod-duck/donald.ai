@@ -1,16 +1,10 @@
 export default async function handler(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).send('Method Not Allowed');
-    }
+    if (req.method !== 'POST') return res.status(405).send('Method Not Allowed');
 
     try {
         const { prompt, fullPrompt } = req.body;
 
-        if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 5) {
-            return res.status(400).json({ error: 'Prompt required - at least 5 chars!' });
-        }
-
-        // Step 1: Generate text with Groq using the full prompt from frontend
+        // 1. Text Generation
         const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -19,22 +13,18 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
                 model: "llama-3.3-70b-versatile",
-                messages: [{
-                    role: "system",
-                    content: fullPrompt || `You are Donald Trump. Respond in first person as if giving a speech in your characteristic style. Be boastful and true to character.`
-                }]
+                messages: [
+                    { role: "system", content: fullPrompt },
+                    { role: "user", content: prompt }
+                ]
             })
         });
 
-        if (!groqRes.ok) throw new Error(`Groq API error: ${groqRes.status}`);
-        
         const gData = await groqRes.json();
         const text = gData?.choices?.[0]?.message?.content;
 
-        if (!text) throw new Error('No content from Groq');
-
-        // Step 2: Generate audio with ElevenLabs
-        const elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${process.env.ELEVENLABS_VOICE_ID}?output_format=mp3_44100_128`, {
+        // 2. Audio Generation
+        const elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${process.env.ELEVENLABS_VOICE_ID}`, {
             method: "POST",
             headers: {
                 "xi-api-key": process.env.ELEVENLABS_API_KEY,
@@ -43,25 +33,17 @@ export default async function handler(req, res) {
             body: JSON.stringify({
                 text,
                 model_id: "eleven_monolingual_v1",
-                voice_settings: { stability: 0.75, similarity_boost: 0.85 }
+                voice_settings: { stability: 0.4, similarity_boost: 0.8 } 
             })
         });
 
-        if (!elevenRes.ok) throw new Error(`ElevenLabs error: ${elevenRes.status}`);
-
         const audioBuffer = await elevenRes.arrayBuffer();
 
-        // Return audio
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        
         return res.status(200).json({
-            audio: Buffer.from(audioBuffer).toString('base64'),
-            visemes: []
+            audio: Buffer.from(audioBuffer).toString('base64')
         });
 
     } catch (e) {
-        console.error('Generate error:', e);
         return res.status(500).json({ error: e.message });
     }
 }
