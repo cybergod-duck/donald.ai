@@ -169,8 +169,8 @@
             text-align: center;
             font-weight: bold;
             line-height: 1.5;
-            margin-top: 15px;
-            margin-bottom: 15px;
+            margin-top: 35px;
+            margin-bottom: 35px;
         }
 
         #credits {
@@ -445,7 +445,6 @@
             const prompt = input.value.trim();
             if (!prompt) return;
 
-            const fullPrompt = systemPrompt + '\n\nRequest: ' + prompt;
             isIdle = false;
             input.value = '';
             input.disabled = true;
@@ -466,13 +465,16 @@
                 const res = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt, fullPrompt })
+                    body: JSON.stringify({ prompt })
                 });
 
                 loadText.textContent = 'CREATING VOICE...';
                 updateProgress(65, 1500);
 
-                if (!res.ok) throw new Error('API failed');
+                if (!res.ok) {
+                    const errorData = await res.json().catch(() => ({}));
+                    throw new Error(errorData.error || `API error: ${res.status}`);
+                }
 
                 const data = await res.json();
                 loadText.textContent = 'LOADING AUDIO...';
@@ -638,7 +640,7 @@
                 input.focus();
                 loadBar.classList.remove('active');
                 loadText.classList.remove('active');
-                alert('Failed to generate speech. Please try again.');
+                alert(`Failed: ${e.message}`);
             }
         }
     </script>
