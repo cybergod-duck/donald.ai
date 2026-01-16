@@ -1,567 +1,861 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DONALD.AI | Voss Neural Research</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        #frame { width: 800px; height: 450px; border: 2px solid #0f0; position: relative; background: #000; box-shadow: 0 0 20px #0f0; }
-        #visual { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.3s ease-in-out; }
-
-        #frame::after { 
-            content: " "; position: absolute; top: 0; left: 0; bottom: 0; right: 0; 
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); 
-            z-index: 50; background-size: 100% 2px, 3px 100%; 
+        :root {
+            --primary-color: #05ffa1;
+            --accent-color: #00f0ff;
+            --danger-color: #ff2a6d;
+            --background-color: #020308;
+            --text-color: #ffffff;
+            --muted-color: #8affc9;
+            --frame-border: rgba(5, 255, 161, 0.7);
+            --scanline-color: rgba(0, 0, 0, 0.35);
+            --font-mono: 'Space Mono', 'Courier New', monospace;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        html, body {
+            height: 100%;
+        }
+        body {
+            margin: 0;
+            padding: 16px 8px 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            background: radial-gradient(circle at top, #06121f 0, #020308 45%, #000 100%);
+            color: var(--primary-color);
+            font-family: var(--font-mono);
+            text-rendering: geometricPrecision;
+        }
+        .page-shell {
+            flex: 1 0 auto;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+        }
+        .chrome-frame {
+            width: 100%;
+            max-width: 1600px;
+            border: 1px solid rgba(5, 255, 161, 0.25);
+            box-shadow: 0 0 18px rgba(0, 0, 0, 0.8), 0 0 32px rgba(5, 255, 161, 0.15);
+            border-radius: 14px;
+            padding: 18px 24px 28px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(4px);
+            background: linear-gradient(135deg, rgba(0,10,20,0.85), rgba(0,0,0,0.95));
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .chrome-frame::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(rgba(255,255,255,0.03), transparent 40%, transparent 60%, rgba(0,0,0,0.6)),
+                        repeating-linear-gradient(0deg, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0) 1px, rgba(0, 255, 128, 0.04) 2px, rgba(0, 255, 128, 0.02) 3px);
+            pointer-events: none;
+            opacity: 0.5;
+            mix-blend-mode: screen;
+        }
+        .chrome-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 18px;
+            position: relative;
+            z-index: 1;
+        }
+        .chrome-title {
+            flex: 1;
+            text-align: center;
+            font-size: 0.9rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--muted-color);
+            opacity: 0.85;
+        }
+        .chrome-status {
+            font-size: 0.75rem;
+            color: var(--accent-color);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent-color);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.9);
+            animation: status-pulse 1.6s ease-in-out infinite;
+        }
+        @keyframes status-pulse {
+            0% { transform: scale(0.9); opacity: 0.6; }
+            50% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.6; }
+        }
+        .music-toggle,
+        .control-button {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            border: 1px solid rgba(0,240,255,0.6);
+            background: radial-gradient(circle, rgba(0,240,255,0.18), rgba(0,0,0,0.9));
+            padding: 0;
+            cursor: pointer;
+            box-shadow: 0 0 14px rgba(5,255,161,0.8), 0 0 28px rgba(0,240,255,0.7);
+            transition: box-shadow 0.18s ease-out, transform 0.14s ease-out, background 0.18s ease-out;
+        }
+        .music-toggle img,
+        .control-button img {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 4px rgba(0,240,255,0.9));
+            transition: filter 0.18s ease-out;
+        }
+        .music-indicator {
+            position: absolute;
+            bottom: 4px;
+            right: 6px;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.9);
+            box-shadow: 0 0 0 rgba(0,0,0,0);
+        }
+        .music-indicator.music-on {
+            background: #00f0ff;
+            box-shadow: 0 0 8px rgba(0,240,255,0.9);
+        }
+        .music-toggle.music-on {
+            box-shadow: 0 0 21px rgba(5,255,161,1), 0 0 40px rgba(0,240,255,0.9);
+        }
+        .music-toggle:hover,
+        .control-button:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 0 21px rgba(5,255,161,1), 0 0 40px rgba(0,240,255,0.9);
+            background: radial-gradient(circle, rgba(5, 255, 161, 0.26), rgba(0, 0, 0, 0.95));
+        }
+        .music-toggle:hover img,
+        .control-button:hover img {
+            filter: drop-shadow(0 0 4px rgba(0,240,255,0.9)) brightness(1.24) saturate(1.3);
+        }
+        .music-toggle:active,
+        .control-button:active {
+            transform: translateY(0) scale(0.98);
+            box-shadow: 0 0 12px rgba(5,255,161,0.9), 0 0 24px rgba(0,240,255,0.7);
+        }
+        .title-block {
+            text-align: center;
+            margin-bottom: 18px;
+            position: relative;
+            z-index: 1;
+        }
+        .title-block h1 {
+            margin: 0;
+            font-size: clamp(2.4rem, 5vw, 3.4rem);
+            letter-spacing: 0.24em;
+            text-transform: uppercase;
+            color: var(--accent-color);
+            text-shadow: 0 0 10px rgba(0,240,255,0.9), 0 0 24px rgba(5,255,161,0.9);
+            animation: title-glow 2.3s ease-in-out infinite alternate;
+        }
+        @keyframes title-glow {
+            0% { text-shadow: 0 0 6px rgba(0,240,255,0.8), 0 0 16px rgba(5,255,161,0.75); }
+            100% { text-shadow: 0 0 14px rgba(0,240,255,1), 0 0 32px rgba(5,255,161,1), 0 0 46px rgba(5,255,161,0.9); }
+        }
+        .title-block p {
+            margin: 10px 0 0;
+            font-size: 0.95rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--muted-color);
+            opacity: 0.9;
+        }
+        .subtitle-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(0,240,255,0.35);
+            font-size: 0.7rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--accent-color);
+            background: radial-gradient(circle, rgba(0,240,255,0.18), transparent 60%);
+        }
+        .subtitle-chip span {
+            font-size: 0.55rem;
+            opacity: 0.8;
+        }
+        .layout-row {
+            display: grid;
+            grid-template-columns: minmax(0, 2.2fr) minmax(0, 5fr) minmax(0, 2.2fr);
+            gap: 24px;
+            align-items: stretch;
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            margin-top: 8px;
+        }
+        .side-rail {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .lower-side-card {
+            flex: 1;
+        }
+        .center-column {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .frame {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border-radius: 12px;
+            border: 1px solid var(--frame-border);
+            overflow: hidden;
+            box-shadow: inset 0 0 32px rgba(0, 0, 0, 0.8), 0 0 24px rgba(5,255,161,0.4), 0 0 46px rgba(0, 240, 255, 0.15);
+            background: radial-gradient(circle at 20% 0, rgba(0,240,255,0.18), transparent 55%), radial-gradient(circle at 90% 100%, rgba(5,255,161,0.18), transparent 55%), #000;
+        }
+        .frame-inner-border {
+            position: absolute;
+            inset: 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(5,255,161,0.25);
             pointer-events: none;
         }
-
-        #load-bar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60%; height: 8px; background: rgba(0, 255, 0, 0.2); border: 2px solid #0f0; z-index: 100; display: none; }
-        #load-bar.active { display: block; }
-        #load-progress { height: 100%; background: #0f0; width: 0%; transition: width 0.2s linear; box-shadow: 0 0 20px #0f0; }
-        #load-text { position: absolute; top: calc(50% + 30px); left: 50%; transform: translateX(-50%); color: #0f0; font-size: 1rem; z-index: 100; display: none; text-shadow: 0 0 10px #0f0; }
-        #load-text.active { display: block; }
-
-        #terminal { width: 800px; margin-top: 15px; border: 1px solid #0f0; padding: 10px; background: #000; cursor: text; }
-        input { background: transparent; border: none; color: #0f0; width: 95%; font-size: 1.2rem; outline: none; font-family: inherit; }
-
-        #title { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 100; }
-        #title h1 { font-size: 3rem; color: #0066cc; text-shadow: 0 0 15px #0066cc, 0 0 30px #0066cc, 0 0 45px rgba(0, 102, 204, 0.5); margin: 0; font-weight: bold; }
-        #title p { font-size: 1.2rem; color: #ffffff; margin: 35px 0 0 0; opacity: 0.9; }
-
-        #random-btn { 
-            margin-top: 15px;
-            background: transparent; 
-            border: 2px solid #0f0; 
-            color: #0f0; 
-            padding: 12px 30px; 
-            font-family: 'Courier New', monospace; 
-            font-size: 1.1rem; 
-            cursor: pointer; 
-            transition: all 0.2s;
-            box-shadow: 0 0 10px #0f0;
-        }
-
-        #random-btn:hover { 
-            background: #0f0; 
-            color: #000; 
-            box-shadow: 0 0 30px #0f0;
-            transform: scale(1.05);
-        }
-
-        #keyboard-hint {
+        .frame::after {
+            content: '';
             position: absolute;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #0066cc;
-            font-size: 1.3rem;
-            text-shadow: 0 0 15px #0066cc, 0 0 30px #0066cc, 0 0 45px rgba(0, 102, 204, 0.5);
+            inset: 0;
+            background: linear-gradient(rgba(10, 10, 10, 0) 50%, var(--scanline-color) 50%), linear-gradient(90deg, rgba(0, 240, 255, 0.1), rgba(5, 255, 161, 0.12), rgba(0, 0, 0, 0.35));
+            background-size: 100% 2px, 3px 100%;
+            mix-blend-mode: screen;
             opacity: 0.9;
-            text-align: center;
-            z-index: 100;
+            pointer-events: none;
         }
-
-        #credits {
+        #visual {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(1.7) saturate(1.3) contrast(1.7);
+            transition: opacity 0.25s ease-out, filter 0.25s ease-out;
+        }
+        @keyframes flash-white {
+            0% { filter: brightness(1.2) contrast(1.5); }
+            50% { filter: brightness(3) saturate(0.2) contrast(3); }
+            100% { filter: brightness(1.7) saturate(1.3) contrast(1.7); }
+        }
+        .flash-transition {
+            animation: flash-white 0.35s ease-out;
+        }
+        #load-bar {
             position: absolute;
-            bottom: 20px;
+            top: 50%;
             left: 50%;
+            transform: translate(-50%, -50%);
+            width: 72%;
+            height: 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(5,255,161,0.7);
+            background: radial-gradient(circle, rgba(0,240,255,0.14), rgba(0,0,0,0.9));
+            box-shadow: 0 0 16px rgba(5,255,161,0.8), 0 0 32px rgba(0,240,255,0.45);
+            overflow: hidden;
+            display: none;
+            z-index: 4;
+        }
+        #load-bar.active {
+            display: block;
+        }
+        #load-progress {
+            height: 100%;
+            width: 0%;
+            background: repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.1) 0, rgba(0, 0, 0, 0.1) 4px, rgba(5,255,161,0.7) 4px, rgba(5,255,161,0.7) 8px);
+            box-shadow: 0 0 18px rgba(5,255,161,0.9), 0 0 30px rgba(0,240,255,0.75);
+            transition: width 0.32s ease-out;
+        }
+        #load-text {
+            position: absolute;
+            left: 50%;
+            top: calc(50% + 32px);
             transform: translateX(-50%);
+            font-size: 0.85rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--primary-color);
+            text-shadow: 0 0 10px rgba(5,255,161,0.9), 0 0 22px rgba(0,240,255,0.9);
+            display: none;
+            z-index: 4;
+        }
+        #load-text.active {
+            display: block;
+        }
+        .input-controls-block {
+            border-radius: 10px;
+            border: 1px solid rgba(5,255,161,0.6);
+            background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(0,20,20,0.96));
+            box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.7), 0 0 18px rgba(5,255,161,0.6), 0 0 32px rgba(0,240,255,0.35);
+            transition: box-shadow 0.22s ease-out, border-color 0.22s ease-out;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+        .input-controls-block:focus-within {
+            border-color: var(--accent-color);
+            box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.7), 0 0 22px rgba(0,240,255,0.9), 0 0 44px rgba(5,255,161,0.6);
+        }
+        #terminal {
+            display: flex;
+            align-items: center;
+            padding: 10px 14px;
+            gap: 8px;
+            cursor: text;
+            border-bottom: 1px solid rgba(5,255,161,0.3);
+        }
+        #terminal span {
+            color: var(--primary-color);
+            font-size: 1.1rem;
+            margin-right: 2px;
+            text-shadow: 0 0 6px rgba(5,255,161,0.8);
+        }
+        #cmd {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--primary-color);
+            font-family: inherit;
+            font-size: 1.05rem;
+            text-shadow: 0 0 5px rgba(5,255,161,0.8);
+            caret-color: var(--accent-color);
+        }
+        #cmd::placeholder {
+            color: rgba(5,255,161,0.55);
+            text-shadow: none;
+            font-size: 0.98rem;
+        }
+        .control-buttons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 14px;
+            padding: 10px 14px;
+            position: relative;
+            z-index: 1;
+        }
+        .side-card {
+            border-radius: 10px;
+            border: 1px solid rgba(0,240,255,0.45);
+            padding: 10px 12px;
+            background: radial-gradient(circle at 0 0, rgba(0,240,255,0.16), transparent 55%), radial-gradient(circle at 100% 100%, rgba(5,255,161,0.16), transparent 55%), rgba(0,0,0,0.92);
+            box-shadow: 0 0 18px rgba(0,240,255,0.35);
+            min-height: 0;
+        }
+        .side-card h2 {
+            margin: 0 0 8px;
+            font-size: 0.8rem;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--accent-color);
+        }
+        .side-card p {
+            margin: 4px 0;
+            line-height: 1.4;
+            font-size: 0.8rem;
+            color: var(--muted-color);
+        }
+        .side-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 6px 0 0;
+        }
+        .side-card li {
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--muted-color);
+            font-size: 0.8rem;
+        }
+        .side-bullet {
+            width: 6px;
+            height: 6px;
+            border-radius: 2px;
+            background: var(--accent-color);
+            box-shadow: 0 0 10px rgba(0,240,255,0.9);
+        }
+        .compact-card ul {
+            margin-top: 2px;
+        }
+        .transcript-card {
+            display: flex;
+            flex-direction: column;
+        }
+        .transcript-body {
+            margin-top: 6px;
+            padding: 8px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(5,255,161,0.35);
+            max-height: 260px;
+            overflow: auto;
+            font-size: 0.78rem;
+            line-height: 1.4;
+            color: #bdfedf;
+            white-space: pre-wrap;
+            flex: 1;
+        }
+        .transcript-placeholder {
+            opacity: 0.7;
+            font-style: italic;
+        }
+        .ghost-btn {
+            margin-top: 8px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(0,240,255,0.45);
+            background: transparent;
+            color: rgba(180,255,230,0.75);
+            font-size: 0.7rem;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            cursor: not-allowed;
+        }
+        .site-footer {
+            flex-shrink: 0;
+            width: 100%;
+            padding: 12px 24px 16px;
+            color: rgba(255,255,255,0.9);
             text-align: center;
-            z-index: 100;
+            font-size: 0.85rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.5));
         }
-
-        #credits a {
-            font-size: 0.9rem;
-            opacity: 0.5;
-            text-decoration: none;
-            transition: all 0.2s;
+        .brand-white {
+            color: #00f0ff;
         }
-
-        #credits a:hover {
-            opacity: 1;
-            text-shadow: 0 0 10px #0f0;
+        @media (max-width: 960px) {
+            .layout-row {
+                grid-template-columns: minmax(0,1fr);
+            }
+            .side-rail {
+                flex-direction: row;
+                flex-wrap: wrap;
+            }
+            .transcript-card {
+                width: 100%;
+            }
         }
-
-        @keyframes flash-white { 
-            0% { filter: brightness(1); } 
-            50% { filter: brightness(5) saturate(0) contrast(3); } 
-            100% { filter: brightness(1); } 
+        @media (max-width: 640px) {
+            body {
+                padding: 12px 6px 0;
+            }
+            .chrome-frame {
+                padding: 14px 10px 20px;
+            }
+            .chrome-title {
+                font-size: 0.75rem;
+                letter-spacing: 0.12em;
+            }
+            .music-toggle,
+            .control-button {
+                width: 50px;
+                height: 50px;
+            }
         }
-
-        .flash-transition { animation: flash-white 0.4s ease-out; }
     </style>
 </head>
 <body>
-    <div id="title">
-        <h1>Donald.AI</h1>
-        <p>Donald.AI will make a speech on anything you want</p>
-    </div>
-    <div id="frame">
-        <div id="load-bar">
-            <div id="load-progress"></div>
+    <div class="page-shell">
+        <div class="chrome-frame">
+            <div class="chrome-header">
+                <button id="music-toggle" class="music-toggle music-on" aria-label="Toggle background music">
+                    <img id="music-icon" src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/note-on.png" alt="Music">
+                    <span class="music-indicator music-on"></span>
+                </button>
+                <div class="chrome-title">DONALD.AI // PRESIDENTIAL SPEECH ENGINE</div>
+                <div class="chrome-status">
+                    <span class="status-dot"></span> LIVE
+                </div>
+            </div>
+            <div class="title-block">
+                <h1>Donald.AI</h1>
+                <p>Type a topic. Hear the speech.</p>
+                <div class="subtitle-chip">
+                    <span>VOICE MODEL:</span> 45TH PRESIDENT
+                </div>
+            </div>
+            <div class="layout-row">
+                <aside class="side-rail left-rail">
+                    <div class="side-card">
+                        <h2>Account</h2>
+                        <p>Sign in to save favorites and manage your speeches. (Coming soon.)</p>
+                        <button class="ghost-btn" disabled>Sign in / Create account</button>
+                    </div>
+                    <div class="side-card lower-side-card">
+                        <h2>Downloads</h2>
+                        <p>Download speeches as clean audio, without background music. (Placeholder.)</p>
+                        <button class="ghost-btn" disabled>Download last speech</button>
+                    </div>
+                </aside>
+                <main class="center-column">
+                    <div class="frame" id="frame">
+                        <div class="frame-inner-border"></div>
+                        <div id="load-bar">
+                            <div id="load-progress"></div>
+                        </div>
+                        <div id="load-text">GENERATING PRESIDENTIAL REMARKS...</div>
+                        <video id="visual" muted loop playsinline preload="auto"></video>
+                    </div>
+                    <div class="input-controls-block">
+                        <div id="terminal">
+                            <span>&gt;</span>
+                            <input type="text" id="cmd" placeholder="give a speech on...">
+                        </div>
+                        <div class="control-buttons">
+                            <button id="pause-btn" class="control-button">
+                                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/pause.png" alt="Pause">
+                            </button>
+                            <button id="mute-btn" class="control-button">
+                                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/mute.png" alt="Mute speech">
+                            </button>
+                            <button id="lightning-btn" class="control-button">
+                                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/create.png" alt="Flash">
+                            </button>
+                            <button id="dice-btn" class="control-button">
+                                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/random.png" alt="Random topic">
+                            </button>
+                            <button id="stop-btn" class="control-button">
+                                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/stop.png" alt="Stop">
+                            </button>
+                        </div>
+                    </div>
+                </main>
+                <aside class="side-rail right-rail">
+                    <div class="side-card compact-card">
+                        <h2>Quick guide</h2>
+                        <ul>
+                            <li><span class="side-bullet"></span>Type any topic.</li>
+                            <li><span class="side-bullet"></span>Press Enter.</li>
+                            <li><span class="side-bullet"></span>Let him talk.</li>
+                        </ul>
+                    </div>
+                    <div class="side-card transcript-card lower-side-card">
+                        <h2>Transcript</h2>
+                        <div id="transcript" class="transcript-body">
+                            <span class="transcript-placeholder">Your speech text will appear here.</span>
+                        </div>
+                    </div>
+                </aside>
+            </div>
         </div>
-        <div id="load-text">GENERATING SPEECH...</div>
-        <video id="visual" muted loop playsinline preload="auto"></video>
     </div>
-    <div id="terminal">
-        <span>> </span><input type="text" id="cmd" placeholder="give a speech on..." autocomplete="off">
-    </div>
-
-    <button id="random-btn">🎲 RANDOM SPEECH</button>
-
-    <div id="keyboard-hint">
-        [SPACE] Pause/Resume • [M] Mute/Unmute • [R] Random • [ESC] Stop
-    </div>
-
-    <div id="credits">
-        <a href="https://soundcloud.com/ducktronikz" target="_blank" rel="noopener"><span style="color: #ffffff;">created by </span><span style="color: #00bfff;">Voss Neural Research</span></a>
-    </div>
-
-    <audio id="ambient" loop>
-        <source src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/drone.mp3" type="audio/mpeg">
-    </audio>
-
-    <audio id="click-sound">
-        <source src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/click.mp3" type="audio/mpeg">
-    </audio>
-
+    <footer class="site-footer">
+        <span>Certified by <span class="brand-white">Simple As That</span></span>
+    </footer>
     <script>
-        const GITHUB_BASE = "https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/";
-
+        const GITHUB_BASE = 'https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/';
         const input = document.getElementById('cmd');
         const visual = document.getElementById('visual');
         const loadBar = document.getElementById('load-bar');
         const loadProgress = document.getElementById('load-progress');
         const loadText = document.getElementById('load-text');
-        const ambient = document.getElementById('ambient');
-        const clickSound = document.getElementById('click-sound');
-        const randomBtn = document.getElementById('random-btn');
-
-        let isIdle = true;
-        let audioContext = null;
-        let analyser = null;
-        let animationFrameId = null;
-        let progressInterval = null;
-        let ambientStarted = false;
+        const pauseBtn = document.getElementById('pause-btn');
+        const muteBtn = document.getElementById('mute-btn');
+        const lightningBtn = document.getElementById('lightning-btn');
+        const diceBtn = document.getElementById('dice-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const transcriptEl = document.getElementById('transcript');
+        const musicToggle = document.getElementById('music-toggle');
+        const musicIndicator = document.querySelector('.music-indicator');
+        const musicIcon = document.getElementById('music-icon');
+        const clickSound = new Audio(GITHUB_BASE + 'click.mp3');
         let currentSpeechAudio = null;
+        let cheerAudio = null;
+        let ambient = new Audio(GITHUB_BASE + 'drone.mp3');
+        ambient.loop = true;
+        ambient.volume = 0.3;
         let isMuted = false;
+        let isMusicOn = true;
+        let isIdle = true;
+        let isCheering = false;
+        let animationFrameId = null;
+        let lastLowVolumeTime = 0;
+        let lastSwitchTime = 0;
+        let currentMouthShape = 'closed';
         let lastVideoNum = null;
         let videoHistory = [];
-        let lastSwitchTime = 0;
-        let currentMouthShape = 'neutral';
-        let lastLowVolumeTime = 0;
-        let cheerAudio = null;
-        let isCheering = false;
-        let pauseVideoPlayed = false;
-
-        const randomTopics = [
-            "Tell me about America",
-            "Give me business advice",
-            "Motivate me to win",
-            "Talk about your greatest achievements",
-            "Tell me about success",
-            "What makes America great",
-            "Give me a pep talk",
-            "Talk about being a winner"
-        ];
-
+        let lastSpeechBase64 = null;
         const mouthShapes = {
-            wide_open: ['wide1.mp4', 'wide2.mp4', 'wide3.mp4', 'wide4.mp4', 'wide5.mp4', 'express1.mp4', 'express2.mp4', 'express3.mp4', '10.mp4', '11.mp4', '12.mp4', '13.mp4', '14.mp4', '8.mp4', '9.mp4'],
-            open: ['express1.mp4', 'express2.mp4', 'express3.mp4', 'express4.mp4', 'express5.mp4', 'express6.mp4', 'wide1.mp4', 'wide2.mp4', 'wide3.mp4', '5.mp4', '6.mp4', '7.mp4', '8.mp4', '9.mp4'],
-            narrow: ['express4.mp4', 'express5.mp4', 'express6.mp4', 'pause1.mp4', 'pause2.mp4', 'pause3.mp4', '3.mp4', '4.mp4', '5.mp4', '12.mp4'],
-            closed: ['pause1.mp4', 'pause2.mp4', 'pause3.mp4', 'pause4.mp4', 'pause5.mp4', '1.mp4', '2.mp4', '3.mp4', '13.mp4', '14.mp4'],
-            neutral: ['1.mp4', '2.mp4', '3.mp4', '4.mp4', '5.mp4', '6.mp4', '7.mp4', '8.mp4', '9.mp4', '10.mp4', '11.mp4', '12.mp4', '13.mp4', '14.mp4', 'express1.mp4', 'express2.mp4', 'express3.mp4', 'express4.mp4', 'express5.mp4', 'express6.mp4', 'pause1.mp4', 'pause2.mp4', 'pause3.mp4', 'pause4.mp4', 'pause5.mp4', 'wide1.mp4', 'wide2.mp4', 'wide3.mp4', 'wide4.mp4', 'wide5.mp4']
+            closed: ['pause1.mp4', 'pause2.mp4', 'pause3.mp4', 'pause4.mp4', 'pause5.mp4'],
+            narrow: ['1.mp4', '2.mp4', '3.mp4', '4.mp4'],
+            neutral: ['5.mp4', '6.mp4', '7.mp4', '8.mp4'],
+            open: ['9.mp4', '10.mp4', '11.mp4', '12.mp4', '13.mp4', '14.mp4'],
+            wide_open: ['wide1.mp4', 'wide2.mp4', 'wide3.mp4', 'wide4.mp4', 'wide5.mp4'],
+            express: ['express1.mp4', 'express2.mp4', 'express3.mp4', 'express4.mp4', 'express5.mp4', 'express6.mp4']
         };
-
         const cheerFiles = ['cheer1.mp3', 'cheer2.mp3', 'cheer3.mp3', 'cheer4.mp3', 'cheer5.mp3'];
 
-        const systemPrompt = `You are Donald Trump. Respond in first person as if giving a speech in your characteristic style: boastful, repetitive, with tangents, and using phrases like 'believe me,' 'tremendous,' 'the best.' Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character. Speak clearly and deliberately, avoiding slurred or nonsensical words.
-
-Always structure your speeches like this example, including exactly two [pause] moments to build energy, followed by continuing the speech. Use ElevenLabs v3 compatible audio tags in square brackets for emotions, delivery, reactions, and pacing, such as [excited], [angry], [whispers], [shouts], [laughs], [sighs], [pauses], but only one or two words per tag. Do not use [cheering] or [applause] as they will be handled separately. End with a strong closer like [shouts].
-
-Example structure:
-Folks, let me tell you about this [excited] TREMENDOUS topic, believe me, it's the best – [more content]. Then [pause], and the energy explodes!
-[Continue speech]. [pause] See? That's the second one!
-[Wrap up]. Thank you, God bless you, and God bless the United States of America! [shouts]`;
-
-        function updateLoad(text, pct, duration = 500) {
-            loadText.textContent = text;
-            loadProgress.style.transition = `width ${duration}ms`;
-            loadProgress.style.width = `${pct}%`;
+        function playClick() {
+            clickSound.play().catch(() => {});
         }
 
-        function startAmbient() {
-            if (!ambientStarted) {
-                ambient.volume = 0.3;
-                ambient.play().then(() => {
-                    ambientStarted = true;
-                }).catch(() => {});
+        function updateMusicUI() {
+            if (isMusicOn) {
+                musicToggle.classList.add('music-on');
+                musicIndicator.classList.add('music-on');
+                musicIcon.src = GITHUB_BASE + 'note-on.png';
+            } else {
+                musicToggle.classList.remove('music-on');
+                musicIndicator.classList.remove('music-on');
+                musicIcon.src = GITHUB_BASE + 'note-off.png';
             }
         }
 
+        async function ensureAmbientPlaying() {
+            try {
+                await ambient.play();
+            } catch (_) {}
+        }
+
+        updateMusicUI();
+        ensureAmbientPlaying();
+
         function loadIdleVideo() {
-            visual.src = GITHUB_BASE + "idle.mp4";
-            visual.load();
+            visual.src = GITHUB_BASE + 'idle.mp4';
+            visual.loop = true;
+            visual.muted = true;
+            visual.style.filter = 'brightness(1.7) saturate(1.3) contrast(1.7)';
             visual.play().catch(() => {});
         }
 
-        function stopCurrentSpeech() {
+        loadIdleVideo();
+
+        pauseBtn.onclick = () => {
+            playClick();
             if (currentSpeechAudio) {
-                currentSpeechAudio.pause();
-                currentSpeechAudio.currentTime = 0;
-                currentSpeechAudio = null;
-            }
-            if (cheerAudio) {
-                cheerAudio.pause();
-                cheerAudio.currentTime = 0;
-                cheerAudio = null;
-            }
-            cancelAnimationFrame(animationFrameId);
-            isIdle = true;
-            ambient.volume = 0.3;
-            loadIdleVideo();
-            input.disabled = false;
-            input.focus();
-            loadBar.classList.remove('active');
-            loadText.classList.remove('active');
-            lastVideoNum = null;
-            videoHistory = [];
-            isCheering = false;
-            pauseVideoPlayed = false;
-        }
-
-        document.addEventListener('keydown', (e) => {
-            if (document.activeElement === input && e.key !== 'Escape') return;
-
-            switch(e.key) {
-                case ' ':
-                    e.preventDefault();
-                    if (currentSpeechAudio && !isIdle) {
-                        if (currentSpeechAudio.paused) {
-                            currentSpeechAudio.play();
-                            visual.play();
-                            if (cheerAudio && cheerAudio.paused) cheerAudio.play();
-                        } else {
-                            currentSpeechAudio.pause();
-                            visual.pause();
-                            if (cheerAudio) cheerAudio.pause();
-                        }
-                    }
-                    break;
-
-                case 'm':
-                case 'M':
-                    e.preventDefault();
-                    isMuted = !isMuted;
-                    if (currentSpeechAudio) {
-                        currentSpeechAudio.volume = isMuted ? 0 : 1;
-                    }
-                    if (cheerAudio) {
-                        cheerAudio.volume = isMuted ? 0 : 1;
-                    }
-                    ambient.volume = isMuted ? 0 : (isIdle ? 0.3 : 0.1);
-                    break;
-
-                case 'r':
-                case 'R':
-                    if (document.activeElement !== input) {
-                        e.preventDefault();
-                        randomBtn.click();
-                    }
-                    break;
-
-                case 'Escape':
-                    e.preventDefault();
-                    stopCurrentSpeech();
-                    location.reload(); // Full reset for clean slate
-                    break;
-            }
-        });
-
-        window.addEventListener('DOMContentLoaded', () => {
-            loadIdleVideo();
-        });
-
-        ['click', 'keydown'].forEach(event => {
-            document.body.addEventListener(event, startAmbient, { once: true });
-        });
-
-        input.focus();
-
-        randomBtn.addEventListener('click', () => {
-            startAmbient();
-            clickSound.currentTime = 0;
-            clickSound.volume = 0.5;
-            clickSound.play().catch(() => {});
-
-            const randomPrompt = randomTopics[Math.floor(Math.random() * randomTopics.length)];
-            input.value = randomPrompt;
-
-            setTimeout(() => {
-                processPrompt();
-            }, 100);
-        });
-
-        function createAudioWithEcho(audioElement) {
-            if (!audioContext) {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            }
-
-            const source = audioContext.createMediaElementSource(audioElement);
-            const delay = audioContext.createDelay();
-            const feedback = audioContext.createGain();
-            const wetGain = audioContext.createGain();
-            const dryGain = audioContext.createGain();
-            analyser = audioContext.createAnalyser();
-
-            analyser.fftSize = 256;
-            analyser.smoothingTimeConstant = 0.6;
-
-            delay.delayTime.value = 0.25;
-            feedback.gain.value = 0.2;
-            wetGain.gain.value = 0.2;
-            dryGain.gain.value = 0.9;
-
-            source.connect(dryGain);
-            source.connect(delay);
-            delay.connect(feedback);
-            feedback.connect(delay);
-            delay.connect(wetGain);
-
-            dryGain.connect(analyser);
-            wetGain.connect(analyser);
-            analyser.connect(audioContext.destination);
-
-            return source;
-        }
-
-        input.onkeydown = async (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                startAmbient();
-                processPrompt();
+                currentSpeechAudio.paused ? currentSpeechAudio.play() : currentSpeechAudio.pause();
             }
         };
 
-        async function processPrompt() {
-            const userPrompt = input.value.trim();
-            if (!userPrompt) return;
+        muteBtn.onclick = () => {
+            playClick();
+            isMuted = !isMuted;
+            if (currentSpeechAudio) currentSpeechAudio.volume = isMuted ? 0 : 1;
+            if (cheerAudio) cheerAudio.volume = isMuted ? 0 : 1;
+        };
 
-            const fullPrompt = `${systemPrompt} User request: ${userPrompt}`;
+        musicToggle.onclick = () => {
+            playClick();
+            isMusicOn = !isMusicOn;
+            ambient.volume = isMusicOn ? 0.3 : 0;
+            updateMusicUI();
+            if (isMusicOn) ensureAmbientPlaying();
+        };
 
-            isIdle = false;
-            input.value = "";
-            input.disabled = true;
-
-            loadBar.classList.add('active');
-            loadText.classList.add('active');
-            updateLoad("CONTACTING AI...", 15, 500);
-
+        lightningBtn.onclick = () => {
+            playClick();
             visual.classList.add('flash-transition');
             setTimeout(() => visual.classList.remove('flash-transition'), 400);
+        };
 
+        diceBtn.onclick = () => {
+            playClick();
+            input.value = 'Random topic: ' + Math.random().toString(36).slice(2);
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+        };
+
+        stopBtn.onclick = () => {
+            playClick();
+            if (currentSpeechAudio) {
+                currentSpeechAudio.pause();
+                currentSpeechAudio.currentTime = 0;
+                cancelAnimationFrame(animationFrameId);
+                loadIdleVideo();
+                input.disabled = false;
+            }
+        };
+
+        function setTranscript(text) {
+            transcriptEl.innerHTML = '';
+            const pre = document.createElement('pre');
+            pre.textContent = text;
+            transcriptEl.appendChild(pre);
+        }
+
+        input.addEventListener('keydown', async (e) => {
+            if (e.key !== 'Enter' || !input.value.trim() || !isIdle) return;
+            isIdle = false;
+            input.disabled = true;
+            loadBar.classList.add('active');
+            loadText.classList.add('active');
+            transcriptEl.innerHTML = '<span class="transcript-placeholder">Generating speech…</span>';
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 10;
+                loadProgress.style.width = progress + '%';
+                if (progress >= 100) clearInterval(progressInterval);
+            }, 300);
             try {
-                updateLoad("GENERATING TEXT...", 30, 1000);
-
-                const res = await fetch('/api/generate', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ prompt: fullPrompt }) 
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: input.value })
                 });
+                if (!res.ok) throw new Error('API request failed');
+                const { audio: base64Audio, transcript } = await res.json();
+                lastSpeechBase64 = base64Audio || null;
+                setTranscript(transcript || '');
+                loadBar.classList.remove('active');
+                loadText.classList.remove('active');
+                clearInterval(progressInterval);
+                loadProgress.style.width = '0%';
+                currentSpeechAudio = new Audio('data:audio/mp3;base64,' + base64Audio);
+                currentSpeechAudio.volume = isMuted ? 0 : 1;
+                currentSpeechAudio.play();
+                ambient.volume = isMusicOn ? 0.1 : 0;
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioCtx.createMediaElementSource(currentSpeechAudio);
+                const analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
+                const frequencyData = new Uint8Array(analyser.frequencyBinCount);
+                const timeData = new Uint8Array(analyser.fftSize);
 
-                updateLoad("CREATING VOICE...", 65, 1500);
-
-                if (!res.ok) throw new Error('API failed');
-
-                const data = await res.json();
-
-                updateLoad("LOADING AUDIO...", 85, 800);
-
-                let audio;
-                if (data.audio) {
-                    const audioBlob = new Blob([Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
-                    audio = new Audio(URL.createObjectURL(audioBlob));
-                } else {
-                    audio = new Audio(URL.createObjectURL(data));
+                function getSmartMouthShape(freqData, timeData) {
+                    let volumeSum = 0;
+                    for (let i = 0; i < timeData.length; i++) {
+                        volumeSum += Math.abs(timeData[i] - 128);
+                    }
+                    const volume = volumeSum / timeData.length;
+                    const lowFreq = freqData.slice(0, 8).reduce((a, b) => a + b, 0) / 8;
+                    const midFreq = freqData.slice(8, 32).reduce((a, b) => a + b, 0) / 24;
+                    const highFreq = freqData.slice(32, 64).reduce((a, b) => a + b, 0) / 32;
+                    if (volume < 8) return 'closed';
+                    if (lowFreq > 70 && volume > 12) return 'wide_open';
+                    if (midFreq > 50 && volume > 8) return 'open';
+                    if (highFreq > 45 && midFreq < 55) return 'narrow';
+                    if (volume < 12) return 'closed';
+                    return 'neutral';
                 }
 
-                currentSpeechAudio = audio;
-                audio.volume = isMuted ? 0 : 1;
-                createAudioWithEcho(audio);
+                function switchVideo(videoNum, isLoop = false) {
+                    visual.style.opacity = 0;
+                    visual.src = GITHUB_BASE + videoNum;
+                    visual.loop = isLoop;
+                    visual.muted = true;
+                    visual.style.filter = 'brightness(1.7) saturate(1.3) contrast(1.7)';
+                    visual.load();
+                    visual.onloadedmetadata = () => {
+                        visual.currentTime = 0;
+                        visual.play().catch(() => {});
+                        visual.style.opacity = 1;
+                    };
+                }
 
-                audio.oncanplaythrough = () => {
-                    updateLoad("READY TO PLAY...", 100, 300);
-
-                    setTimeout(() => {
-                        audio.play().catch(e => {
-                            console.error('Audio play failed:', e);
-                            input.disabled = false;
-                            loadBar.classList.remove('active');
-                            loadText.classList.remove('active');
-                        });
-                    }, 300);
-                };
-
-                audio.onplay = () => {
-                    setTimeout(() => {
-                        loadBar.classList.remove('active');
-                        loadText.classList.remove('active');
-                        loadProgress.style.width = '0%';
-                    }, 300);
-
-                    startAmbient();
-                    ambient.volume = isMuted ? 0 : 0.1;
-
-                    const frequencyData = new Uint8Array(analyser.frequencyBinCount);
-                    const timeData = new Uint8Array(analyser.fftSize);
-
-                    function getSmartMouthShape(freqData, timeData) {
-                        let volumeSum = 0;
-                        for (let i = 0; i < timeData.length; i++) {
-                            volumeSum += Math.abs(timeData[i] - 128);
+                function syncLipSync() {
+                    if (!currentSpeechAudio || currentSpeechAudio.paused || isCheering) {
+                        return;
+                    }
+                    analyser.getByteFrequencyData(frequencyData);
+                    analyser.getByteTimeDomainData(timeData);
+                    const now = Date.now();
+                    const mouthShape = getSmartMouthShape(frequencyData, timeData);
+                    const volume = frequencyData.reduce((a, b) => a + b, 0) / frequencyData.length;
+                    let refinedShape = mouthShape;
+                    if (volume < 2.5) refinedShape = 'closed';
+                    else if (volume > 35) refinedShape = 'wide_open';
+                    else if (volume > 15) refinedShape = 'open';
+                    else if (volume > 7) refinedShape = 'narrow';
+                    if (volume < 2.5) {
+                        if (!lastLowVolumeTime) lastLowVolumeTime = now;
+                        if (now - lastLowVolumeTime > 1000) {
+                            refinedShape = 'closed';
                         }
-                        const volume = volumeSum / timeData.length;
-
-                        const lowFreq = freqData.slice(0, 8).reduce((a, b) => a + b, 0) / 8;
-                        const midFreq = freqData.slice(8, 32).reduce((a, b) => a + b, 0) / 24;
-                        const highFreq = freqData.slice(32, 64).reduce((a, b) => a + b, 0) / 32;
-
-                        if (volume < 8) return 'closed';
-                        if (lowFreq > 70 && volume > 12) return 'wide_open';
-                        if (midFreq > 50 && volume > 8) return 'open';
-                        if (highFreq > 45 && midFreq < 55) return 'narrow';
-                        if (volume < 12) return 'closed';
-
-                        return 'neutral';
+                    } else {
+                        lastLowVolumeTime = 0;
                     }
-
-                    function switchVideo(videoNum, isLoop = false) {
-                        visual.style.opacity = 0;  // Fade out current
-                        visual.src = GITHUB_BASE + videoNum;
-                        visual.loop = isLoop;
-                        visual.muted = true;
-                        const brightness = 1.7;
-                        const saturation = 1.3;
-                        const contrast = 1.7;
-                        visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
-
-                        visual.load();
-
-                        visual.onloadedmetadata = () => {
-                            visual.currentTime = 0; // Start from beginning for pauses
-                            visual.play().catch(() => {});
-                            visual.style.opacity = 1;  // Fade in new video
-                        };
-                    }
-
-                    function syncLipSync() {
-                        if (!currentSpeechAudio.paused && !isCheering) {
-                            analyser.getByteFrequencyData(frequencyData);
-                            analyser.getByteTimeDomainData(timeData);
-
-                            const now = Date.now();
-                            const mouthShape = getSmartMouthShape(frequencyData, timeData);
-
-                            // Refined thresholds for snappier response
-                            const volume = frequencyData.reduce((a, b) => a + b, 0) / frequencyData.length;
-                            let refinedShape = mouthShape;
-                            if (volume < 2.5) refinedShape = 'closed'; // Better for [pause]
-                            else if (volume > 35) refinedShape = 'wide_open';
-                            else if (volume > 15) refinedShape = 'open';
-                            else if (volume > 7) refinedShape = 'narrow';
-
-                            // Detect sustained pause for cheering
-                            if (volume < 2.5) {
-                                if (!lastLowVolumeTime) lastLowVolumeTime = now;
-                                if (now - lastLowVolumeTime > 500 && !isCheering) { // 0.5s low volume triggers cheer
-                                    isCheering = true;
-                                    currentSpeechAudio.pause();
-
-                                    // Play random cheer audio
-                                    const cheerFile = cheerFiles[Math.floor(Math.random() * cheerFiles.length)];
-                                    cheerAudio = new Audio(GITHUB_BASE + cheerFile);
-                                    cheerAudio.volume = isMuted ? 0 : 1;
-                                    cheerAudio.play();
-
-                                    // Select random pause video and play fully (no loop)
-                                    const pauseOptions = mouthShapes.closed.filter(v => v.startsWith('pause'));
-                                    const pauseVideo = pauseOptions[Math.floor(Math.random() * pauseOptions.length)];
-                                    switchVideo(pauseVideo, false); // Play once, duration matches cheer
-                                    pauseVideoPlayed = true;
-
-                                    // Resume speech after cheer ends
-                                    cheerAudio.onended = () => {
-                                        isCheering = false;
-                                        lastLowVolumeTime = 0;
-                                        pauseVideoPlayed = false;
-                                        currentSpeechAudio.play();
-                                        // Switch back to lip-sync
-                                        syncLipSync();
-                                    };
-                                }
-                            } else {
-                                lastLowVolumeTime = 0;
-                            }
-
-                            // Normal lip-sync if not cheering
-                            if (!isCheering && !pauseVideoPlayed) {
-                                if ((refinedShape !== currentMouthShape && now - lastSwitchTime > 200) || now - lastSwitchTime > 1000) {
-                                    const videoOptions = mouthShapes[refinedShape];
-                                    let availableVideos = videoOptions.filter(v => v !== lastVideoNum && !videoHistory.includes(v));
-                                    if (availableVideos.length < 2) {
-                                        availableVideos = videoOptions;
-                                        videoHistory = [];
-                                    }
-                                    const videoNum = availableVideos[Math.floor(Math.random() * availableVideos.length)];
-                                    switchVideo(videoNum);
-                                    lastVideoNum = videoNum;
-                                    videoHistory.push(videoNum);
-                                    if (videoHistory.length > 4) videoHistory.shift();
-                                    currentMouthShape = refinedShape;
-                                    lastSwitchTime = now;
-                                }
-                            }
-
-                            animationFrameId = requestAnimationFrame(syncLipSync);
+                    if (refinedShape !== currentMouthShape || now - lastSwitchTime > 1000) {
+                        const shapeVideos = mouthShapes[refinedShape];
+                        let videoNum = shapeVideos[Math.floor(Math.random() * shapeVideos.length)];
+                        while (videoNum === lastVideoNum) {
+                            videoNum = shapeVideos[Math.floor(Math.random() * shapeVideos.length)];
                         }
+                        switchVideo(videoNum, false);
+                        currentMouthShape = refinedShape;
+                        lastVideoNum = videoNum;
+                        lastSwitchTime = now;
+                        videoHistory.push(videoNum);
+                        if (videoHistory.length > 5) videoHistory.shift();
                     }
+                    animationFrameId = requestAnimationFrame(syncLipSync);
+                }
 
+                currentSpeechAudio.onplay = () => {
                     syncLipSync();
                 };
 
-                audio.onended = () => {
+                currentSpeechAudio.onpause = () => {
                     cancelAnimationFrame(animationFrameId);
-                    isIdle = true;
-                    currentSpeechAudio = null;
-                    lastVideoNum = null;
-                    videoHistory = [];
-
-                    ambient.volume = isMuted ? 0 : 0.3;
-
-                    visual.src = GITHUB_BASE + "end.mp4";
-                    visual.loop = false;
-                    visual.muted = true;
-                    visual.style.filter = '';
-                    visual.load();
-                    visual.play().catch(() => {});
-                    visual.onended = () => {
-                        loadIdleVideo();
-                        input.disabled = false;
-                        input.focus();
-                    };
                 };
 
-            } catch (e) {
-                console.error('Error:', e);
-                input.disabled = false;
-                input.focus();
+                currentSpeechAudio.onended = () => {
+                    cancelAnimationFrame(animationFrameId);
+                    loadIdleVideo();
+                    ambient.volume = isMusicOn ? 0.3 : 0;
+                    isIdle = true;
+                    input.disabled = false;
+                    input.value = '';
+                    if (Math.random() < 0.5) {
+                        isCheering = true;
+                        cheerAudio = new Audio(GITHUB_BASE + cheerFiles[Math.floor(Math.random() * cheerFiles.length)]);
+                        cheerAudio.volume = isMuted ? 0 : 0.7;
+                        cheerAudio.play();
+                        cheerAudio.onended = () => { isCheering = false; };
+                    }
+                };
+            } catch (error) {
+                console.error('Error generating speech:', error);
+                setTranscript('Error: Could not generate speech.');
                 loadBar.classList.remove('active');
                 loadText.classList.remove('active');
-                alert('Failed to generate speech. Please try again.');
+                clearInterval(progressInterval);
+                loadProgress.style.width = '0%';
+                isIdle = true;
+                input.disabled = false;
             }
-        }
+        });
     </script>
 </body>
 </html>
-```
