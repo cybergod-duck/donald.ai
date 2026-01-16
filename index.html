@@ -5,25 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DONALD.AI | Presidential Speech Engine</title>
     
-    <!-- Google Fonts: Share Tech Mono for that "Terminal" look -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
     
-    <!-- CSS Link -->
-    <link rel="stylesheet" href="./assets/css/styles.css">
+    <!-- CSS Link (Clean Path) -->
+    <link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
 
-    <!-- 1. HEADER (Moved up a smidge via CSS) -->
+    <!-- HEADER -->
     <header class="site-header">
         <h1 class="brand-title">DONALD<span class="highlight">.AI</span></h1>
     </header>
 
-    <!-- 2. MAIN LAYOUT (3 Columns) -->
+    <!-- MAIN LAYOUT -->
     <div class="app-layout">
         
-        <!-- LEFT COLUMN: Controls -->
+        <!-- LEFT COLUMN -->
         <aside class="side-column left-panel">
             <div class="panel-box">
                 <h2>CONTROLS</h2>
@@ -48,24 +48,20 @@
             </div>
         </aside>
 
-        <!-- CENTER COLUMN: Video & Input -->
+        <!-- CENTER COLUMN -->
         <main class="center-column">
             
             <!-- VIDEO FRAME -->
             <div class="frame" id="frame">
                 <div class="frame-inner-border"></div>
                 
-                <!-- Loading Animation Elements -->
                 <div id="load-bar"><div id="load-progress"></div></div>
                 <div id="load-text">GENERATING PRESIDENTIAL REMARKS...</div>
 
-                <!-- VIDEO PLAYER (Fixed: Added source, autoplay, muted) -->
                 <video id="visual" class="video-feed" autoplay loop muted playsinline preload="auto">
-                    <!-- This path points to the file we moved earlier -->
                     <source src="assets/videos/special/idle.mp4" type="video/mp4">
                 </video>
                 
-                <!-- OVERLAY TEXT (Fixed: Positioned at bottom) -->
                 <div class="video-overlay screen-overlay-bottom">
                     <p class="overlay-subtitle instruction-text">Type a topic. Hear the speech.</p>
                     <div class="subtitle-chip model-status">
@@ -84,7 +80,7 @@
             </div>
         </main>
 
-        <!-- RIGHT COLUMN: Transcript -->
+        <!-- RIGHT COLUMN -->
         <aside class="side-column right-panel">
             <div class="panel-box transcript-box">
                 <h2>LIVE TRANSCRIPT</h2>
@@ -96,12 +92,12 @@
 
     </div>
 
-    <!-- 3. FOOTER -->
+    <!-- FOOTER -->
     <footer class="site-footer">
         <span>Certified by <span class="brand-white">Simple As That</span></span>
     </footer>
 
-    <!-- JS Link -->
-    <script src="./assets/js/app.js"></script>
+    <!-- JS Link (Clean Path) -->
+    <script src="assets/js/app.js"></script>
 </body>
 </html>
