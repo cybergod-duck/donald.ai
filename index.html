@@ -1,154 +1,263 @@
-Yeah, Tim—totally agree on the ambient toggle. That drone.mp3 adds killer cyberpunk vibes, but for clean speech previews (especially if you're gearing up for paid MP3 downloads without it), a simple on/off button makes sense. We can add it below the random button, styled to match the green glow aesthetic. For downloads, we could hook up a "Download Speech" button that grabs the raw audio blob (no ambient or echo mixed in) and saves it as MP3—easy to paywall later with Stripe or whatever. But since you said "not right now," I'll keep it out for this version.
-
-On keyboard controls: Looks like a focus bug in the code. The listener skips if input is focused (to avoid messing with typing), but for non-Escape keys, it should still work globally. I tweaked it to capture keys even if input isn't focused (using `capture: true` and better conditions). Tested mentally—should fix [SPACE], [M], [R], [ESC] now.
-
-Here's the updated HTML/JS with:
-- New "Toggle Music" button (turns ambient on/off, persists state).
-- Fixed keyboard listener for reliable controls.
-- No download button yet—hit me when you're ready.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>DON.AI | CYBERTRUMP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DON.AI CYBERTRUMP</title>
     <style>
-        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; overflow: hidden; }
-        #frame { width: 800px; height: 450px; border: 2px solid #0f0; position: relative; background: #000; box-shadow: 0 0 20px #0f0; }
-        #visual { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.3s ease-in-out; }
+        * {
+            box-sizing: border-box;
+        }
 
-        #frame::after { 
-            content: " "; position: absolute; top: 0; left: 0; bottom: 0; right: 0; 
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); 
-            z-index: 50; background-size: 100% 2px, 3px 100%; 
+        body {
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #frame {
+            width: 800px;
+            height: 450px;
+            border: 2px solid #0f0;
+            position: relative;
+            background: #000;
+            box-shadow: 0 0 20px #0f0;
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+        }
+
+            color: #0f0;
+            font-size: 1rem;
+            padding: 8px 12px;
+            border-bottom: 1px solid #0f0;
+            font-family: 'Courier New', monospace;
+        }
+
+        #visual {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            flex: 1;
+        }
+
+        #frame::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: 
+                linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 50;
+            background-size: 100% 2px, 3px 100%;
             pointer-events: none;
         }
 
-        #load-bar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60%; height: 8px; background: rgba(0, 255, 0, 0.2); border: 2px solid #0f0; z-index: 100; display: none; }
-        #load-bar.active { display: block; }
-        #load-progress { height: 100%; background: #0f0; width: 0%; transition: width 0.2s linear; box-shadow: 0 0 20px #0f0; }
-        #load-text { position: absolute; top: calc(50% + 30px); left: 50%; transform: translateX(-50%); color: #0f0; font-size: 1rem; z-index: 100; display: none; text-shadow: 0 0 10px #0f0; }
-        #load-text.active { display: block; }
+        .load-bar {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 8px;
+            background: rgba(0, 255, 0, 0.2);
+            border: 2px solid #0f0;
+            z-index: 100;
+            display: none;
+        }
 
-        #terminal { width: 800px; margin-top: 15px; border: 1px solid #0f0; padding: 10px; background: #000; cursor: text; }
-        input { background: transparent; border: none; color: #0f0; width: 95%; font-size: 1.2rem; outline: none; font-family: inherit; }
+        .load-bar.active {
+            display: block;
+        }
 
-        #title { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 100; }
-        #title h1 { font-size: 3rem; color: #0066cc; text-shadow: 0 0 15px #0066cc, 0 0 30px #0066cc, 0 0 45px rgba(0, 102, 204, 0.5); margin: 0; font-weight: bold; }
-        #title p { font-size: 1.2rem; color: #ffffff; margin: 35px 0 0 0; opacity: 0.9; }
+        #load-progress {
+            height: 100%;
+            background: #0f0;
+            width: 0;
+            transition: width 0.2s linear;
+            box-shadow: 0 0 20px #0f0;
+        }
 
-        #random-btn, #music-toggle { 
+        #load-text {
+            position: absolute;
+            top: calc(50% - 30px);
+            left: 50%;
+            transform: translateX(-50%);
+            color: #0f0;
+            font-size: 1rem;
+            z-index: 100;
+            display: none;
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        #load-text.active {
+            display: block;
+        }
+
+        #terminal {
+            width: 800px;
             margin-top: 15px;
-            background: transparent; 
-            border: 2px solid #0f0; 
-            color: #0f0; 
-            padding: 12px 30px; 
-            font-family: 'Courier New', monospace; 
-            font-size: 1.1rem; 
-            cursor: pointer; 
+            border: 1px solid #0f0;
+            padding: 10px;
+            background: #000;
+            cursor: text;
+        }
+
+        #cmd {
+            background: transparent;
+            border: none;
+            color: #0f0;
+            width: 95%;
+            font-size: 1.2rem;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 20px;
+            z-index: 100;
+        }
+
+        .title h1 {
+            font-size: 3rem;
+            color: #0066cc;
+            text-shadow: 0 0 15px #0066cc, 0 0 30px #0066cc, 0 0 45px rgba(0, 102, 204, 0.5);
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .title p {
+            display: none;
+        }
+
+        #random-btn {
+            margin-top: 15px;
+            background: transparent;
+            border: 2px solid #0f0;
+            color: #0f0;
+            padding: 12px 30px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            cursor: pointer;
             transition: all 0.2s;
             box-shadow: 0 0 10px #0f0;
         }
 
-        #random-btn:hover, #music-toggle:hover { 
-            background: #0f0; 
-            color: #000; 
+        #random-btn:hover {
+            background: #0f0;
+            color: #000;
             box-shadow: 0 0 30px #0f0;
             transform: scale(1.05);
         }
 
-        #keyboard-hint {
-            position: absolute;
-            bottom: 80px;
-            left: 50%;
-            transform: translateX(-50%);
+        .keyboard-hint {
             color: #0066cc;
-            font-size: 1.3rem;
+            font-size: 1.1rem;
             text-shadow: 0 0 15px #0066cc, 0 0 30px #0066cc, 0 0 45px rgba(0, 102, 204, 0.5);
-            opacity: 0.9;
+            opacity: 0.95;
             text-align: center;
-            z-index: 100;
+            font-weight: bold;
+            line-height: 1.5;
+            margin-top: 15px;
+            margin-bottom: 15px;
         }
 
         #credits {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
             text-align: center;
-            z-index: 100;
-        }
-
-        #credits a {
             font-size: 0.9rem;
-            opacity: 0.5;
-            text-decoration: none;
-            transition: all 0.2s;
+            margin-top: auto;
+            padding-top: 10px;
         }
 
-        #credits a:hover {
-            opacity: 1;
-            text-shadow: 0 0 10px #0f0;
+        #credits span:first-child {
+            color: #fff;
+            opacity: 0.7;
         }
 
-        @keyframes flash-white { 
-            0% { filter: brightness(1); } 
-            50% { filter: brightness(5) saturate(0) contrast(3); } 
-            100% { filter: brightness(1); } 
+        #credits span:last-child {
+            color: #00bfff;
+            opacity: 0.9;
+            text-shadow: 0 0 10px #00bfff;
         }
 
-        .flash-transition { animation: flash-white 0.4s ease-out; }
+        @keyframes flash-white {
+            0% { filter: brightness(1); }
+            50% { filter: brightness(5) saturate(0) contrast(3); }
+            100% { filter: brightness(1); }
+        }
+
+        .flash-transition {
+            animation: flash-white 0.4s ease-out;
+        }
     </style>
 </head>
+
 <body>
-    <div id="title">
+    <div class="title">
         <h1>Donald.AI</h1>
-        <p>Have Trump give you a speech about anything you want</p>
     </div>
+
     <div id="frame">
-        <div id="load-bar">
+        <div id="frame-header">Donald.AI will give a speech on anything you want</div>
+        <div class="load-bar" id="load-bar">
             <div id="load-progress"></div>
         </div>
         <div id="load-text">GENERATING SPEECH...</div>
         <video id="visual" muted loop playsinline preload="auto"></video>
     </div>
+
     <div id="terminal">
-        <span>> </span><input type="text" id="cmd" placeholder="ASK TRUMP ANYTHING..." autocomplete="off">
+        <span><input type="text" id="cmd" placeholder="Give a speech on..." autocomplete="off"></span>
     </div>
 
-    <button id="random-btn">🎲 RANDOM SPEECH</button>
-    <button id="music-toggle">🎵 TOGGLE MUSIC</button>  <!-- New button for ambient toggle -->
+    <button id="random-btn">RANDOM SPEECH</button>
 
-    <div id="keyboard-hint">
-        [SPACE] Pause/Resume • [M] Mute/Unmute • [R] Random • [ESC] Stop
+    <div class="keyboard-hint">
+        <b>SPACE</b> Pause/Resume &nbsp; <b>M</b> Mute/Unmute<br>
+        <b>R</b> Random &nbsp; <b>ESC</b> Stop
     </div>
 
     <div id="credits">
-        <a href="https://soundcloud.com/ducktronikz" target="_blank" rel="noopener"><span style="color: #ffffff;">Made by </span><span style="color: #00bfff;">CyberDvck</span></a>
+        <span>Made by </span><span>Voss Neural Research</span>
     </div>
 
+    <!-- Audio elements -->
     <audio id="ambient" loop>
         <source src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/drone.mp3" type="audio/mpeg">
     </audio>
-
+    <audio id="cheers-sound">
+        <source src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/cheers.mp3" type="audio/mpeg">
+    </audio>
     <audio id="click-sound">
         <source src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/click.mp3" type="audio/mpeg">
     </audio>
 
     <script>
-        const GITHUB_BASE = "https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/";
+        const GITHUB_BASE = 'https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/';
 
+        // DOM elements
         const input = document.getElementById('cmd');
         const visual = document.getElementById('visual');
         const loadBar = document.getElementById('load-bar');
         const loadProgress = document.getElementById('load-progress');
         const loadText = document.getElementById('load-text');
         const ambient = document.getElementById('ambient');
+        const cheersSnd = document.getElementById('cheers-sound');
         const clickSound = document.getElementById('click-sound');
         const randomBtn = document.getElementById('random-btn');
-        const musicToggle = document.getElementById('music-toggle');
 
+        // State variables
         let isIdle = true;
         let audioContext = null;
         let analyser = null;
@@ -157,51 +266,36 @@ Here's the updated HTML/JS with:
         let ambientStarted = false;
         let currentSpeechAudio = null;
         let isMuted = false;
-        let lastVideoNum = null;
+        let lastVideoFilename = null;
         let videoHistory = [];
-        let isAmbientOn = true;  // Default ambient on
-
-        // Array of cheer sound URLs based on uploaded files
-        const cheerSounds = [
-            GITHUB_BASE + "cheer1.mp3",
-            GITHUB_BASE + "cheer2.mp3",
-            GITHUB_BASE + "cheer3.mp3",
-            GITHUB_BASE + "cheer4.mp3",
-            GITHUB_BASE + "cheer5.mp3"
-        ];
-
-        let cheerAudio = null;  // For playing cheers
-        let lastPauseTime = 0;  // Track pause detection
-        const pauseThreshold = 1500;  // ms of low volume/closed mouth to trigger cheer (tweak as needed)
-        const cheerChance = 0.3;  // 30% chance to play during a pause (to avoid overdoing it)
 
         const randomTopics = [
-            "Tell me about America",
-            "Give me business advice",
-            "Motivate me to win",
-            "Talk about your greatest achievements",
-            "Tell me about success",
-            "What makes America great",
-            "Give me a pep talk",
-            "Talk about being a winner"
+            'Tell me about America',
+            'Give me business advice',
+            'Motivate me to win',
+            'Talk about your greatest achievements',
+            'Tell me about success',
+            'What makes America great',
+            'Give me a pep talk',
+            'Talk about being a winner'
         ];
 
+        // FIXED: Removed idle.mp4 from neutral array - it's only for idle state
         const mouthShapes = {
-            wide_open: [1, 4, 7, 8, 9, 10, 11, 12, 13, 14],
-            open: [2, 3, 5, 6, 7, 8, 9, 10, 11],
-            narrow: [1, 2, 3, 4, 5, 6, 12],
-            closed: [1, 2, 3, 4, 13, 14],
-            neutral: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]  // All for fallback variety
+            wideopen: ['wide1.mp4', 'wide2.mp4', 'wide3.mp4', 'wide4.mp4', 'wide5.mp4', 'express1.mp4', 'express2.mp4', '1.mp4', '4.mp4', '7.mp4', '8.mp4', '9.mp4', '10.mp4', '11.mp4', '12.mp4', '13.mp4', '14.mp4'],
+            open: ['express3.mp4', 'express4.mp4', 'express5.mp4', '2.mp4', '3.mp4', '5.mp4', '6.mp4'],
+            narrow: ['express6.mp4', '1.mp4', '2.mp4', '3.mp4', '4.mp4', '5.mp4', '6.mp4', '12.mp4'],
+            closed: ['pause1.mp4', 'pause2.mp4', 'pause3.mp4', 'pause4.mp4', 'pause5.mp4'],
+            // FIXED: Neutral is now a selective fallback without idle.mp4
+            neutral: ['1.mp4', '2.mp4', '3.mp4', '4.mp4', '5.mp4', '6.mp4', '7.mp4', '8.mp4', '9.mp4', '10.mp4', '11.mp4', '12.mp4', '13.mp4', '14.mp4']
         };
 
-        // Updated system prompt to insert [pause] tags for dramatic effect
-        const systemPrompt = "You are Donald Trump. Respond in first person as if giving a speech in your characteristic style: boastful, repetitive, with tangents, and using phrases like 'believe me,' 'tremendous,' 'the best.' Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character. Keep it natural and conversational. To add dynamic effects, frequently insert ONLY these supported audio tags where they fit: [laughs] for humor, [sarcastic] for smirking/sarcasm, [excited] for happy/energetic moments, [applause] or [clapping] for crowd cheers after big statements, [sighs] for pauses, [whispers] for emphasis, [gasp] for surprise, and [pause] for dramatic silences or breaks in the speech. Do NOT use unsupported tags like [smirks], [happy], or [crowd cheers]—they will be spoken literally. Use tags sparingly but effectively, especially [pause] to create moments of tension or emphasis.";
+        const systemPrompt = 'You are Donald Trump. Respond in first person as if giving a speech in your characteristic style - boastful, repetitive, with tangents, and using phrases like "believe me", "tremendous", "the best". Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character. Include occasional applause and pause tags naturally where Trump would pause for effect or crowd reaction.';
 
         function updateProgress(target, duration = 2000) {
             if (progressInterval) clearInterval(progressInterval);
             const current = parseFloat(loadProgress.style.width) || 0;
             const increment = (target - current) / (duration / 50);
-
             progressInterval = setInterval(() => {
                 const currentVal = parseFloat(loadProgress.style.width) || 0;
                 if (currentVal >= target) {
@@ -213,7 +307,7 @@ Here's the updated HTML/JS with:
         }
 
         function startAmbient() {
-            if (!ambientStarted && isAmbientOn) {
+            if (!ambientStarted) {
                 ambient.volume = 0.3;
                 ambient.play().then(() => {
                     ambientStarted = true;
@@ -221,20 +315,16 @@ Here's the updated HTML/JS with:
             }
         }
 
-        function toggleAmbient() {
-            isAmbientOn = !isAmbientOn;
-            if (isAmbientOn) {
-                startAmbient();
-                musicToggle.textContent = '🎵 TOGGLE MUSIC (ON)';
-            } else {
-                ambient.pause();
-                ambientStarted = false;
-                musicToggle.textContent = '🎵 TOGGLE MUSIC (OFF)';
-            }
+        function stopAmbient() {
+            ambient.pause();
+            ambient.currentTime = 0;
+            ambientStarted = false;
         }
 
+        // FIXED: Idle video now loops properly
         function loadIdleVideo() {
-            visual.src = GITHUB_BASE + "idle.mp4";
+            visual.src = GITHUB_BASE + 'idle.mp4';
+            visual.loop = true;  // ← FIX: Ensure loop is enabled
             visual.load();
             visual.play().catch(() => {});
         }
@@ -245,27 +335,23 @@ Here's the updated HTML/JS with:
                 currentSpeechAudio.currentTime = 0;
                 currentSpeechAudio = null;
             }
-            if (cheerAudio) {
-                cheerAudio.pause();
-                cheerAudio.currentTime = 0;
-                cheerAudio = null;
-            }
             cancelAnimationFrame(animationFrameId);
             isIdle = true;
-            ambient.volume = 0.3;
+            stopAmbient();
             loadIdleVideo();
             input.disabled = false;
             input.focus();
             loadBar.classList.remove('active');
             loadText.classList.remove('active');
-            lastVideoNum = null;
+            lastVideoFilename = null;
             videoHistory = [];
-            lastPauseTime = 0;
         }
 
-        // Fixed keyboard listener: Use capture true for global capture, and relax input focus check
+        // Keyboard controls
         document.addEventListener('keydown', (e) => {
-            switch(e.key) {
+            if (document.activeElement === input && e.key !== 'Escape') return;
+
+            switch (e.key) {
                 case ' ':
                     e.preventDefault();
                     if (currentSpeechAudio && !isIdle) {
@@ -276,7 +362,6 @@ Here's the updated HTML/JS with:
                         }
                     }
                     break;
-
                 case 'm':
                 case 'M':
                     e.preventDefault();
@@ -286,45 +371,35 @@ Here's the updated HTML/JS with:
                     }
                     ambient.volume = isMuted ? 0 : (isIdle ? 0.3 : 0.1);
                     break;
-
                 case 'r':
                 case 'R':
-                    e.preventDefault();
-                    randomBtn.click();
+                    if (document.activeElement !== input) {
+                        e.preventDefault();
+                        randomBtn.click();
+                    }
                     break;
-
                 case 'Escape':
                     e.preventDefault();
                     stopCurrentSpeech();
                     break;
             }
-        }, { capture: true });
-
-        window.addEventListener('DOMContentLoaded', () => {
-            loadIdleVideo();
         });
 
+        // Start ambient sound on first interaction
+        window.addEventListener('DOMContentLoaded', loadIdleVideo);
         ['click', 'keydown'].forEach(event => {
             document.body.addEventListener(event, startAmbient, { once: true });
         });
-
-        input.focus();
 
         randomBtn.addEventListener('click', () => {
             startAmbient();
             clickSound.currentTime = 0;
             clickSound.volume = 0.5;
             clickSound.play().catch(() => {});
-
             const randomPrompt = randomTopics[Math.floor(Math.random() * randomTopics.length)];
             input.value = randomPrompt;
-
-            setTimeout(() => {
-                processPrompt();
-            }, 100);
+            setTimeout(processPrompt, 100);
         });
-
-        musicToggle.addEventListener('click', toggleAmbient);
 
         function createAudioWithEcho(audioElement) {
             if (!audioContext) {
@@ -336,8 +411,8 @@ Here's the updated HTML/JS with:
             const feedback = audioContext.createGain();
             const wetGain = audioContext.createGain();
             const dryGain = audioContext.createGain();
-            analyser = audioContext.createAnalyser();
 
+            analyser = audioContext.createAnalyser();
             analyser.fftSize = 256;
             analyser.smoothingTimeConstant = 0.6;
 
@@ -359,42 +434,25 @@ Here's the updated HTML/JS with:
             return source;
         }
 
-        // Function to play a random cheer sound
-        function playRandomCheer() {
-            if (cheerSounds.length === 0 || isMuted) return;
-
-            const randomCheer = cheerSounds[Math.floor(Math.random() * cheerSounds.length)];
-            cheerAudio = new Audio(randomCheer);
-            cheerAudio.volume = 0.5;  // Adjust volume (lower than speech)
-            cheerAudio.play().catch(e => console.error('Cheer play failed:', e));
-
-            // Fade out after playing to blend
-            cheerAudio.onended = () => {
-                cheerAudio = null;
-            };
-        }
-
         input.onkeydown = async (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                startAmbient();
                 processPrompt();
             }
         };
 
         async function processPrompt() {
-            const userPrompt = input.value.trim();
-            if (!userPrompt) return;
+            const prompt = input.value.trim();
+            if (!prompt) return;
 
-            const fullPrompt = `${systemPrompt} User request: ${userPrompt}`;
-
+            const fullPrompt = systemPrompt + '\n\nRequest: ' + prompt;
             isIdle = false;
-            input.value = "";
+            input.value = '';
             input.disabled = true;
 
             loadBar.classList.add('active');
             loadText.classList.add('active');
-            loadText.textContent = "CONTACTING AI...";
+            loadText.textContent = 'CONTACTING AI...';
             loadProgress.style.width = '0%';
             updateProgress(15, 500);
 
@@ -402,31 +460,30 @@ Here's the updated HTML/JS with:
             setTimeout(() => visual.classList.remove('flash-transition'), 400);
 
             try {
-                loadText.textContent = "GENERATING TEXT...";
+                loadText.textContent = 'GENERATING TEXT...';
                 updateProgress(30, 1000);
 
-                const res = await fetch('/api/generate', { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ prompt: fullPrompt }) 
+                const res = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, fullPrompt })
                 });
 
-                loadText.textContent = "CREATING VOICE...";
+                loadText.textContent = 'CREATING VOICE...';
                 updateProgress(65, 1500);
 
                 if (!res.ok) throw new Error('API failed');
 
                 const data = await res.json();
-
-                loadText.textContent = "LOADING AUDIO...";
+                loadText.textContent = 'LOADING AUDIO...';
                 updateProgress(85, 800);
 
                 let audio;
                 if (data.audio) {
-                    const audioBlob = new Blob([Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
+                    const audioBlob = new Blob([new Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
                     audio = new Audio(URL.createObjectURL(audioBlob));
                 } else {
-                    audio = new Audio(URL.createObjectURL(data));
+                    audio = new Audio(data.audioUrl);
                 }
 
                 currentSpeechAudio = audio;
@@ -434,16 +491,15 @@ Here's the updated HTML/JS with:
                 createAudioWithEcho(audio);
 
                 audio.oncanplaythrough = () => {
-                    loadText.textContent = "READY TO PLAY...";
+                    loadText.textContent = 'READY TO PLAY...';
                     updateProgress(100, 300);
-
                     setTimeout(() => {
-                        audio.play().catch(e => {
+                        audio.play().catch((e) => {
                             console.error('Audio play failed:', e);
-                            input.disabled = false;
-                            loadBar.classList.remove('active');
-                            loadText.classList.remove('active');
                         });
+                        input.disabled = false;
+                        loadBar.classList.remove('active');
+                        loadText.classList.remove('active');
                     }, 300);
                 };
 
@@ -453,137 +509,128 @@ Here's the updated HTML/JS with:
                         loadText.classList.remove('active');
                         loadProgress.style.width = '0%';
                     }, 300);
-
                     startAmbient();
                     ambient.volume = isMuted ? 0 : 0.1;
-
-                    const frequencyData = new Uint8Array(analyser.frequencyBinCount);
-                    const timeData = new Uint8Array(analyser.fftSize);
-                    let lastSwitchTime = 0;
-                    let currentMouthShape = 'neutral';
-                    let currentPauseStart = 0;
-                    let isPaused = false;
-
-                    function getSmartMouthShape(freqData, timeData) {
-                        let volumeSum = 0;
-                        for (let i = 0; i < timeData.length; i++) {
-                            volumeSum += Math.abs(timeData[i] - 128);
-                        }
-                        const volume = volumeSum / timeData.length;
-
-                        const lowFreq = freqData.slice(0, 8).reduce((a, b) => a + b, 0) / 8;
-                        const midFreq = freqData.slice(8, 32).reduce((a, b) => a + b, 0) / 24;
-                        const highFreq = freqData.slice(32, 64).reduce((a, b) => a + b, 0) / 32;
-
-                        if (volume < 8) return 'closed';
-                        if (lowFreq > 70 && volume > 12) return 'wide_open';
-                        if (midFreq > 50 && volume > 8) return 'open';
-                        if (highFreq > 45 && midFreq < 55) return 'narrow';
-                        if (volume < 12) return 'closed';
-
-                        return 'neutral';
-                    }
-
-                    function switchVideo(videoNum, isPause = false) {
-                        visual.style.opacity = 0;  // Fade out current
-                        visual.src = GITHUB_BASE + videoNum + '.mp4';
-                        visual.loop = isPause;  // Loop during pauses for "still" effect
-                        visual.muted = true;
-                        const brightness = 1.7;
-                        const saturation = 1.3;
-                        const contrast = 1.7;
-                        visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
-
-                        visual.load();
-
-                        visual.onloadedmetadata = () => {
-                            visual.currentTime = Math.random() * visual.duration;
-                            visual.play().catch(() => {});
-                            visual.style.opacity = 1;  // Fade in new video
-                        };
-                    }
-
-                    function syncLipSync() {
-                        if (!audio.paused) {
-                            analyser.getByteFrequencyData(frequencyData);
-                            analyser.getByteTimeDomainData(timeData);
-
-                            const now = Date.now();
-                            const mouthShape = getSmartMouthShape(frequencyData, timeData);
-
-                            // Pause detection: Low volume/closed mouth for threshold time
-                            const volumeSum = timeData.reduce((sum, val) => sum + Math.abs(val - 128), 0);
-                            const volume = volumeSum / timeData.length;
-                            if ((mouthShape === 'closed' || mouthShape === 'neutral') && volume < 10) {
-                                if (currentPauseStart === 0) {
-                                    currentPauseStart = now;
-                                } else if (now - currentPauseStart > pauseThreshold) {
-                                    if (Math.random() < cheerChance && !cheerAudio) {
-                                        playRandomCheer();
-                                    }
-                                    if (!isPaused) {
-                                        visual.pause();  // Pause video to "slow down" during silence
-                                        isPaused = true;
-                                    }
-                                    currentPauseStart = now;  // Extend pause detection
-                                }
-                            } else {
-                                currentPauseStart = 0;
-                                if (isPaused) {
-                                    visual.play();  // Resume video when speaking resumes
-                                    isPaused = false;
-                                }
-                            }
-
-                            if ((mouthShape !== currentMouthShape && now - lastSwitchTime > 500) || 
-                                now - lastSwitchTime > 1500) {
-
-                                const videoOptions = mouthShapes[mouthShape];
-
-                                let availableVideos = videoOptions.filter(v => !videoHistory.includes(v));
-                                if (availableVideos.length < 2) {
-                                    availableVideos = videoOptions;
-                                    videoHistory = [];
-                                }
-
-                                const videoNum = availableVideos[Math.floor(Math.random() * availableVideos.length)];
-
-                                switchVideo(videoNum, mouthShape === 'closed' || mouthShape === 'neutral');  // Loop if paused/closed
-                                lastVideoNum = videoNum;
-                                videoHistory.push(videoNum);
-                                if (videoHistory.length > 4) videoHistory.shift();
-                                currentMouthShape = mouthShape;
-                                lastSwitchTime = now;
-                            }
-
-                            animationFrameId = requestAnimationFrame(syncLipSync);
-                        }
-                    }
-
-                    syncLipSync();
                 };
 
+                // FIXED: Added pause event listener to trigger cheers on pause
+                audio.onpause = () => {
+                    cheersSnd.currentTime = 0;
+                    cheersSnd.volume = 0.5;
+                    cheersSnd.play().catch(() => {});
+                };
+
+                const frequencyData = new Uint8Array(analyser.frequencyBinCount);
+                const timeData = new Uint8Array(analyser.fftSize);
+                let lastSwitchTime = 0;
+                let currentMouthShape = 'neutral';
+
+                function getSmartMouthShape(freqData, timeData) {
+                    let volumeSum = 0;
+                    for (let i = 0; i < timeData.length; i++) {
+                        volumeSum += Math.abs(timeData[i] - 128);
+                    }
+                    const volume = volumeSum / timeData.length;
+
+                    const lowFreq = freqData.slice(0, 8).reduce((a, b) => a + b, 0) / 8;
+                    const midFreq = freqData.slice(8, 32).reduce((a, b) => a + b, 0) / 24;
+                    const highFreq = freqData.slice(32, 64).reduce((a, b) => a + b, 0) / 32;
+
+                    if (volume < 5) return 'closed';
+                    if (lowFreq > 100 && volume > 20) return 'wideopen';
+                    if (midFreq > 80 && volume > 15) return 'open';
+                    if (highFreq > 60 && midFreq < 60) return 'narrow';
+                    if (volume > 15) return 'closed';
+
+                    return 'neutral';
+                }
+
+                function switchVideo(videoFilename) {
+                    visual.style.opacity = '0';
+                    visual.src = GITHUB_BASE + videoFilename;
+                    visual.loop = false;
+                    visual.muted = true;
+
+                    const brightness = 1.7, saturation = 1.3, contrast = 1.7;
+                    visual.style.filter = `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`;
+
+                    visual.load();
+                    visual.onloadedmetadata = () => {
+                        visual.currentTime = Math.random() * visual.duration;
+                        visual.play().catch(() => {});
+                        visual.style.opacity = '1';
+                    };
+                }
+
+                function syncLipSync() {
+                    if (!audio.paused) {
+                        analyser.getByteFrequencyData(frequencyData);
+                        analyser.getByteTimeDomainData(timeData);
+
+                        const now = Date.now();
+                        const mouthShape = getSmartMouthShape(frequencyData, timeData);
+
+                        if (mouthShape !== currentMouthShape && (now - lastSwitchTime > 800 || now - lastSwitchTime > 2000)) {
+                            const videoOptions = mouthShapes[mouthShape];
+                            let availableVideos = videoOptions.filter(v => v !== lastVideoFilename);
+
+                            if (availableVideos.length === 0) {
+                                availableVideos = videoOptions;
+                            }
+
+                            const videoNum = Math.floor(Math.random() * availableVideos.length);
+                            const selectedVideo = availableVideos[videoNum];
+
+                            if (selectedVideo !== lastVideoFilename) {
+                                switchVideo(selectedVideo);
+                                lastVideoFilename = selectedVideo;
+                                videoHistory.push(selectedVideo);
+
+                                if (videoHistory.length > 8) {
+                                    videoHistory.shift();
+                                }
+                            }
+
+                            currentMouthShape = mouthShape;
+                            lastSwitchTime = now;
+                        }
+                    }
+
+                    animationFrameId = requestAnimationFrame(syncLipSync);
+                }
+
+                // FIXED: Properly implemented end.mp4 sequence
                 audio.onended = () => {
                     cancelAnimationFrame(animationFrameId);
                     isIdle = true;
                     currentSpeechAudio = null;
-                    lastVideoNum = null;
+                    lastVideoFilename = null;
                     videoHistory = [];
 
-                    ambient.volume = isMuted ? 0 : 0.3;
-
-                    visual.src = GITHUB_BASE + "end.mp4";
+                    // Load and play end video
+                    visual.src = GITHUB_BASE + 'end.mp4';
                     visual.loop = false;
                     visual.muted = true;
-                    visual.style.filter = '';
+                    visual.style.filter = `brightness(1.7) saturate(1.3) contrast(1.7)`;
                     visual.load();
-                    visual.play().catch(() => {});
+
                     visual.onended = () => {
+                        console.log('End sequence complete, loading idle');
                         loadIdleVideo();
-                        input.disabled = false;
-                        input.focus();
                     };
+
+                    visual.play().catch((err) => {
+                        console.error('end.mp4 failed to play:', err);
+                        // Fallback: go straight to idle if end.mp4 doesn't exist
+                        loadIdleVideo();
+                    });
+
+                    ambient.volume = isMuted ? 0 : 0.3;
+                    input.disabled = false;
+                    input.focus();
                 };
+
+                syncLipSync();
 
             } catch (e) {
                 console.error('Error:', e);
@@ -596,5 +643,5 @@ Here's the updated HTML/JS with:
         }
     </script>
 </body>
+
 </html>
-```
