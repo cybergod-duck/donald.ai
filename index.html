@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DON.AI CYBERTRUMP</title>
+    <title>Donald.AI</title>
     <style>
         * {
             box-sizing: border-box;
@@ -482,7 +482,12 @@
 
                 let audio;
                 if (data.audio) {
-                    const audioBlob = new Blob([new Uint8Array.from(atob(data.audio), c => c.charCodeAt(0))], { type: 'audio/mpeg' });
+                    const binaryString = atob(data.audio);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
                     audio = new Audio(URL.createObjectURL(audioBlob));
                 } else {
                     audio = new Audio(data.audioUrl);
