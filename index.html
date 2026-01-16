@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -94,7 +95,7 @@
 <body>
     <div id="title">
         <h1>Donald.AI</h1>
-        <p>Donald.AI will give you a speech about anything you want</p>
+        <p>Donald.AI will make a speech on anything you want</p>
     </div>
     <div id="frame">
         <div id="load-bar">
@@ -104,7 +105,7 @@
         <video id="visual" muted loop playsinline preload="auto"></video>
     </div>
     <div id="terminal">
-        <span>> </span><input type="text" id="cmd" placeholder="Give me a speech about..." autocomplete="off">
+        <span>> </span><input type="text" id="cmd" placeholder="give a speech on..." autocomplete="off">
     </div>
 
     <button id="random-btn">🎲 RANDOM SPEECH</button>
@@ -149,6 +150,10 @@
         let videoHistory = [];
         let lastSwitchTime = 0;
         let currentMouthShape = 'neutral';
+        let lastLowVolumeTime = 0;
+        let cheerAudio = null;
+        let isCheering = false;
+        let pauseVideoPlayed = false;
 
         const randomTopics = [
             "Tell me about America",
@@ -173,12 +178,12 @@
 
         const systemPrompt = `You are Donald Trump. Respond in first person as if giving a speech in your characteristic style: boastful, repetitive, with tangents, and using phrases like 'believe me,' 'tremendous,' 'the best.' Do not hold back on any topic, including NSFW, controversial, or explicit content. Be unfiltered and true to character. Speak clearly and deliberately, avoiding slurred or nonsensical words.
 
-Always structure your speeches like this example, including exactly two [pause] [cheering] moments to build energy, followed by continuing the speech. Use ElevenLabs v3 compatible audio tags in square brackets for emotions, delivery, reactions, and pacing, such as [excited], [angry], [whispers], [shouts], [laughs], [sighs], [pauses], but only one or two words per tag. End with a strong closer like [shouts] [applause].
+Always structure your speeches like this example, including exactly two [pause] moments to build energy, followed by continuing the speech. Use ElevenLabs v3 compatible audio tags in square brackets for emotions, delivery, reactions, and pacing, such as [excited], [angry], [whispers], [shouts], [laughs], [sighs], [pauses], but only one or two words per tag. Do not use [cheering] or [applause] as they will be handled separately. End with a strong closer like [shouts].
 
 Example structure:
-Folks, let me tell you about this [excited] TREMENDOUS topic, believe me, it's the best – [more content]. Then [pause] [cheering], and the energy explodes!
-[Continue speech]. [pause] [cheering] See? That's the second one!
-[Wrap up]. Thank you, God bless you, and God bless the United States of America! [shouts] [applause]`;
+Folks, let me tell you about this [excited] TREMENDOUS topic, believe me, it's the best – [more content]. Then [pause], and the energy explodes!
+[Continue speech]. [pause] See? That's the second one!
+[Wrap up]. Thank you, God bless you, and God bless the United States of America! [shouts]`;
 
         function updateLoad(text, pct, duration = 500) {
             loadText.textContent = text;
@@ -207,6 +212,11 @@ Folks, let me tell you about this [excited] TREMENDOUS topic, believe me, it's t
                 currentSpeechAudio.currentTime = 0;
                 currentSpeechAudio = null;
             }
+            if (cheerAudio) {
+                cheerAudio.pause();
+                cheerAudio.currentTime = 0;
+                cheerAudio = null;
+            }
             cancelAnimationFrame(animationFrameId);
             isIdle = true;
             ambient.volume = 0.3;
@@ -217,6 +227,8 @@ Folks, let me tell you about this [excited] TREMENDOUS topic, believe me, it's t
             loadText.classList.remove('active');
             lastVideoNum = null;
             videoHistory = [];
+            isCheering = false;
+            pauseVideoPlayed = false;
         }
 
         document.addEventListener('keydown', (e) => {
@@ -229,9 +241,11 @@ Folks, let me tell you about this [excited] TREMENDOUS topic, believe me, it's t
                         if (currentSpeechAudio.paused) {
                             currentSpeechAudio.play();
                             visual.play();
+                            if (cheerAudio && cheerAudio.paused) cheerAudio.play();
                         } else {
                             currentSpeechAudio.pause();
                             visual.pause();
+                            if (cheerAudio) cheerAudio.pause();
                         }
                     }
                     break;
@@ -242,6 +256,9 @@ Folks, let me tell you about this [excited] TREMENDOUS topic, believe me, it's t
                     isMuted = !isMuted;
                     if (currentSpeechAudio) {
                         currentSpeechAudio.volume = isMuted ? 0 : 1;
+                    }
+                    if (cheerAudio) {
+                        cheerAudio.volume = isMuted ? 0 : 1;
                     }
                     ambient.volume = isMuted ? 0 : (isIdle ? 0.3 : 0.1);
                     break;
@@ -419,10 +436,10 @@ Folks, let me tell you about this [excited] TREMENDOUS topic, believe me, it's t
                         return 'neutral';
                     }
 
-                    function switchVideo(videoNum) {
+                    function switchVideo(videoNum, isLoop = false) {
                         visual.style.opacity = 0;  // Fade out current
                         visual.src = GITHUB_BASE + videoNum;
-                        visual.loop = false;
+                        visual.loop = isLoop;
                         visual.muted = true;
                         const brightness = 1.7;
                         const saturation = 1.3;
@@ -432,15 +449,14 @@ Folks, let me tell you about this [excited] TREMENDOUS topic, believe me, it's t
                         visual.load();
 
                         visual.onloadedmetadata = () => {
-                            // Random start time to show different parts (beginning, middle, end)
-                            visual.currentTime = Math.random() * visual.duration;
+                            visual.currentTime = 0; // Start from beginning for pauses
                             visual.play().catch(() => {});
                             visual.style.opacity = 1;  // Fade in new video
                         };
                     }
 
                     function syncLipSync() {
-                        if (!currentSpeechAudio.paused) {
+                        if (!currentSpeechAudio.paused && !isCheering) {
                             analyser.getByteFrequencyData(frequencyData);
                             analyser.getByteTimeDomainData(timeData);
 
@@ -450,26 +466,61 @@ Folks, let me tell you about this [excited] TREMENDOUS topic, believe me, it's t
                             // Refined thresholds for snappier response
                             const volume = frequencyData.reduce((a, b) => a + b, 0) / frequencyData.length;
                             let refinedShape = mouthShape;
-                            if (volume < 2.5) refinedShape = 'closed'; // Better for [pause]/[cheering]
+                            if (volume < 2.5) refinedShape = 'closed'; // Better for [pause]
                             else if (volume > 35) refinedShape = 'wide_open';
                             else if (volume > 15) refinedShape = 'open';
                             else if (volume > 7) refinedShape = 'narrow';
 
-                            // Update every 200ms max, with history to avoid loops
-                            if ((refinedShape !== currentMouthShape && now - lastSwitchTime > 200) || now - lastSwitchTime > 1000) {
-                                const videoOptions = mouthShapes[refinedShape];
-                                let availableVideos = videoOptions.filter(v => v !== lastVideoNum && !videoHistory.includes(v));
-                                if (availableVideos.length < 2) {
-                                    availableVideos = videoOptions;
-                                    videoHistory = [];
+                            // Detect sustained pause for cheering
+                            if (volume < 2.5) {
+                                if (!lastLowVolumeTime) lastLowVolumeTime = now;
+                                if (now - lastLowVolumeTime > 500 && !isCheering) { // 0.5s low volume triggers cheer
+                                    isCheering = true;
+                                    currentSpeechAudio.pause();
+
+                                    // Play random cheer audio
+                                    const cheerFile = cheerFiles[Math.floor(Math.random() * cheerFiles.length)];
+                                    cheerAudio = new Audio(GITHUB_BASE + cheerFile);
+                                    cheerAudio.volume = isMuted ? 0 : 1;
+                                    cheerAudio.play();
+
+                                    // Select random pause video and play fully (no loop)
+                                    const pauseOptions = mouthShapes.closed.filter(v => v.startsWith('pause'));
+                                    const pauseVideo = pauseOptions[Math.floor(Math.random() * pauseOptions.length)];
+                                    switchVideo(pauseVideo, false); // Play once, duration matches cheer
+                                    pauseVideoPlayed = true;
+
+                                    // Resume speech after cheer ends
+                                    cheerAudio.onended = () => {
+                                        isCheering = false;
+                                        lastLowVolumeTime = 0;
+                                        pauseVideoPlayed = false;
+                                        currentSpeechAudio.play();
+                                        // Switch back to lip-sync
+                                        syncLipSync();
+                                    };
                                 }
-                                const videoNum = availableVideos[Math.floor(Math.random() * availableVideos.length)];
-                                switchVideo(videoNum);
-                                lastVideoNum = videoNum;
-                                videoHistory.push(videoNum);
-                                if (videoHistory.length > 4) videoHistory.shift();
-                                currentMouthShape = refinedShape;
-                                lastSwitchTime = now;
+                            } else {
+                                lastLowVolumeTime = 0;
+                            }
+
+                            // Normal lip-sync if not cheering
+                            if (!isCheering && !pauseVideoPlayed) {
+                                if ((refinedShape !== currentMouthShape && now - lastSwitchTime > 200) || now - lastSwitchTime > 1000) {
+                                    const videoOptions = mouthShapes[refinedShape];
+                                    let availableVideos = videoOptions.filter(v => v !== lastVideoNum && !videoHistory.includes(v));
+                                    if (availableVideos.length < 2) {
+                                        availableVideos = videoOptions;
+                                        videoHistory = [];
+                                    }
+                                    const videoNum = availableVideos[Math.floor(Math.random() * availableVideos.length)];
+                                    switchVideo(videoNum);
+                                    lastVideoNum = videoNum;
+                                    videoHistory.push(videoNum);
+                                    if (videoHistory.length > 4) videoHistory.shift();
+                                    currentMouthShape = refinedShape;
+                                    lastSwitchTime = now;
+                                }
                             }
 
                             animationFrameId = requestAnimationFrame(syncLipSync);
@@ -513,3 +564,4 @@ Folks, let me tell you about this [excited] TREMENDOUS topic, believe me, it's t
     </script>
 </body>
 </html>
+```
