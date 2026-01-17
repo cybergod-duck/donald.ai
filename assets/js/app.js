@@ -1,379 +1,413 @@
-const ASSET_BASE = '/assets/';
+document.addEventListener('DOMContentLoaded', () => {
+  const ASSET_BASE = '/assets/';
 
-const elements = {
-  input: document.getElementById('cmd'),
-  visual: document.getElementById('visual'),
-  loadBar: document.getElementById('load-bar'),
-  loadProgress: document.getElementById('load-progress'),
-  loadText: document.getElementById('load-text'),
-  pauseBtn: document.getElementById('pause-btn'),
-  muteBtn: document.getElementById('mute-btn'),
-  lightningBtn: document.getElementById('lightning-btn'),
-  diceBtn: document.getElementById('dice-btn'),
-  stopBtn: document.getElementById('stop-btn'),
-  transcript: document.getElementById('transcript'),
-  musicToggle: document.getElementById('music-toggle'),
-  musicIndicator: document.querySelector('.music-indicator'),
-  musicIcon: document.getElementById('music-icon'),
-};
-
-const clickSound = new Audio(`${ASSET_BASE}audio/click.mp3`);
-const ambient = new Audio(`${ASSET_BASE}audio/drone.mp3`);
-ambient.loop = true;
-ambient.volume = 0.3;
-
-let currentSpeechAudio = null;
-let cheerAudio = null;
-let isMuted = false;
-let isMusicOn = true;
-let isIdle = true;
-let isCheering = false;
-let animationFrameId = null;
-let lastLowVolumeTime = 0;
-let lastSwitchTime = 0;
-let currentMouthShape = 'closed';
-let lastVideoByShape = {};
-let videoHistory = [];
-let speechAudios = [];
-let currentIndex = 0;
-
-const mouthShapes = {
-  closed: ['mouth-shapes/pause1.mp4', 'mouth-shapes/pause2.mp4', 'mouth-shapes/pause3.mp4', 'mouth-shapes/pause4.mp4', 'mouth-shapes/pause5.mp4'],
-  narrow: ['mouth-shapes/1.mp4', 'mouth-shapes/2.mp4', 'mouth-shapes/3.mp4', 'mouth-shapes/4.mp4'],
-  neutral: ['mouth-shapes/5.mp4', 'mouth-shapes/6.mp4', 'mouth-shapes/7.mp4', 'mouth-shapes/8.mp4'],
-  open: ['mouth-shapes/9.mp4', 'mouth-shapes/10.mp4', 'mouth-shapes/11.mp4', 'mouth-shapes/12.mp4', 'mouth-shapes/13.mp4', 'mouth-shapes/14.mp4'],
-  wide_open: ['mouth-shapes/wide1.mp4', 'mouth-shapes/wide2.mp4', 'mouth-shapes/wide3.mp4', 'mouth-shapes/wide4.mp4', 'mouth-shapes/wide5.mp4'],
-  express: ['mouth-shapes/express1.mp4', 'mouth-shapes/express2.mp4', 'mouth-shapes/express3.mp4', 'mouth-shapes/express4.mp4', 'mouth-shapes/express5.mp4', 'mouth-shapes/express6.mp4'],
-};
-
-const midCheerFiles = ['cheers/cheer1.mp3', 'cheers/cheer3.mp3', 'cheers/cheer4.mp3', 'cheers/cheer5.mp3'];
-
-const randomTopics = [
-  'the future of artificial intelligence and American jobs',
-  'the southern border and immigration policy',
-  'bringing manufacturing back to the United States',
-  'energy independence and drilling in America',
-  'law and order in our great cities',
-  'freedom of speech and cancel culture',
-  'the role of social media in politics',
-  'protecting the Second Amendment',
-  'healthcare reform for American families',
-  'cutting taxes for the middle class',
-  'trade deals with China and other countries',
-  'rebuilding the U.S. military and veterans care',
-  'election integrity and voter ID laws',
-  'space exploration and sending Americans to Mars',
-  'education, school choice, and parents\' rights',
-  'the national debt and government spending',
-  'crime, policing, and public safety',
-  'infrastructure, roads, and beautiful new airports',
-  'big tech monopolies and antitrust action',
-  'the Supreme Court and the Constitution',
-  'American farmers and the heartland',
-  'NATO, foreign policy, and alliances',
-  'border security and the wall',
-  'inflation, interest rates, and the economy',
-  'American energy, coal, oil, and gas',
-  'corruption in Washington, D.C.',
-  'supporting police and first responders',
-  'freedom of religion in America',
-  'protecting American workers from outsourcing',
-  'American small businesses and entrepreneurship',
-  'veterans, the VA, and honoring our heroes',
-  'the future of American space leadership',
-  'strengthening American infrastructure coast to coast',
-];
-
-function playClick() {
-  clickSound.currentTime = 0;
-  clickSound.play().catch(() => {});
-}
-
-function updateMusicUI() {
-  elements.musicToggle.classList.toggle('music-on', isMusicOn);
-  elements.musicIndicator.classList.toggle('music-on', isMusicOn);
-  elements.musicIcon.src = `${ASSET_BASE}images/${isMusicOn ? 'note-on.png' : 'note-off.png'}`;
-}
-
-function ensureAmbientPlaying() {
-  ambient.play().catch(() => {});
-}
-
-function switchVideo(videoFile, loop = false) {
-  if (!videoFile || elements.visual.src.endsWith(videoFile)) return;
-  elements.visual.style.opacity = 1;
-  elements.visual.loop = loop;
-  elements.visual.muted = true;
-  elements.visual.src = `${ASSET_BASE}videos/${videoFile}`;
-  elements.visual.load();
-  elements.visual.onloadedmetadata = () => {
-    elements.visual.currentTime = 0;
-    elements.visual.play().catch(() => {});
-    elements.visual.style.opacity = 1;
+  const elements = {
+    input: document.getElementById('cmd'),
+    visual: document.getElementById('visual'),
+    loadBar: document.getElementById('load-bar'),
+    loadProgress: document.getElementById('load-progress'),
+    loadText: document.getElementById('load-text'),
+    pauseBtn: document.getElementById('pause-btn'),
+    muteBtn: document.getElementById('mute-btn'),
+    lightningBtn: document.getElementById('lightning-btn'),
+    diceBtn: document.getElementById('dice-btn'),
+    stopBtn: document.getElementById('stop-btn'),
+    transcript: document.getElementById('transcript'),
+    musicToggle: document.getElementById('music-toggle'),
+    musicIndicator: document.querySelector('.music-indicator'),
+    musicIcon: document.getElementById('music-icon'),
   };
-}
 
-function loadIdleVideo() {
-  switchVideo('special/idle.mp4', true);
-  currentMouthShape = 'closed';
-  videoHistory = [];
-  lastVideoByShape = {};
-}
+  // Preload critical sounds to avoid delays / policy blocks
+  const clickSound = new Audio(`${ASSET_BASE}audio/click.mp3`);
+  clickSound.preload = 'auto';
+  const ambient = new Audio(`${ASSET_BASE}audio/drone.mp3`);
+  ambient.preload = 'auto';
+  ambient.loop = true;
+  ambient.volume = 0.3;
 
-function loadEndVideo() {
-  switchVideo('special/end.mp4', false);
-  elements.visual.onloadedmetadata = () => {
-    const duration = elements.visual.duration || 0;
-    if (duration > 4) {
-      setTimeout(() => {
-        cheerAudio = new Audio(`${ASSET_BASE}audio/cheers/cheer2.mp3`);
-        cheerAudio.volume = isMuted ? 0 : 0.7;
-        cheerAudio.play().catch(() => {});
-      }, Math.max(0, (duration - 4) * 1000));
+  let currentSpeechAudio = null;
+  let cheerAudio = null;
+  let isMuted = false;
+  let isMusicOn = true;
+  let isIdle = true;
+  let isCheering = false;
+  let animationFrameId = null;
+  let lastLowVolumeTime = 0;
+  let lastSwitchTime = 0;
+  let currentMouthShape = 'closed';
+  let lastVideoByShape = {};
+  let videoHistory = [];
+  let speechAudios = [];
+  let currentIndex = 0;
+
+  const mouthShapes = {
+    closed: ['mouth-shapes/pause1.mp4', 'mouth-shapes/pause2.mp4', 'mouth-shapes/pause3.mp4', 'mouth-shapes/pause4.mp4', 'mouth-shapes/pause5.mp4'],
+    narrow: ['mouth-shapes/1.mp4', 'mouth-shapes/2.mp4', 'mouth-shapes/3.mp4', 'mouth-shapes/4.mp4'],
+    neutral: ['mouth-shapes/5.mp4', 'mouth-shapes/6.mp4', 'mouth-shapes/7.mp4', 'mouth-shapes/8.mp4'],
+    open: ['mouth-shapes/9.mp4', 'mouth-shapes/10.mp4', 'mouth-shapes/11.mp4', 'mouth-shapes/12.mp4', 'mouth-shapes/13.mp4', 'mouth-shapes/14.mp4'],
+    wide_open: ['mouth-shapes/wide1.mp4', 'mouth-shapes/wide2.mp4', 'mouth-shapes/wide3.mp4', 'mouth-shapes/wide4.mp4', 'mouth-shapes/wide5.mp4'],
+    express: ['mouth-shapes/express1.mp4', 'mouth-shapes/express2.mp4', 'mouth-shapes/express3.mp4', 'mouth-shapes/express4.mp4', 'mouth-shapes/express5.mp4', 'mouth-shapes/express6.mp4'],
+  };
+
+  const midCheerFiles = ['audio/cheers/cheer1.mp3', 'audio/cheers/cheer3.mp3', 'audio/cheers/cheer4.mp3', 'audio/cheers/cheer5.mp3'];
+
+  const randomTopics = [
+    'the future of artificial intelligence and American jobs',
+    'the southern border and immigration policy',
+    'bringing manufacturing back to the United States',
+    'energy independence and drilling in America',
+    'law and order in our great cities',
+    'freedom of speech and cancel culture',
+    'the role of social media in politics',
+    'protecting the Second Amendment',
+    'healthcare reform for American families',
+    'cutting taxes for the middle class',
+    'trade deals with China and other countries',
+    'rebuilding the U.S. military and veterans care',
+    'election integrity and voter ID laws',
+    'space exploration and sending Americans to Mars',
+    'education, school choice, and parents\' rights',
+    'the national debt and government spending',
+    'crime, policing, and public safety',
+    'infrastructure, roads, and beautiful new airports',
+    'big tech monopolies and antitrust action',
+    'the Supreme Court and the Constitution',
+    'American farmers and the heartland',
+    'NATO, foreign policy, and alliances',
+    'border security and the wall',
+    'inflation, interest rates, and the economy',
+    'American energy, coal, oil, and gas',
+    'corruption in Washington, D.C.',
+    'supporting police and first responders',
+    'freedom of religion in America',
+    'protecting American workers from outsourcing',
+    'American small businesses and entrepreneurship',
+    'veterans, the VA, and honoring our heroes',
+    'the future of American space leadership',
+    'strengthening American infrastructure coast to coast',
+  ];
+
+  function playClick() {
+    clickSound.currentTime = 0;
+    clickSound.play().catch(e => console.warn('Click sound blocked:', e));
+  }
+
+  function updateMusicUI() {
+    elements.musicToggle?.classList.toggle('music-on', isMusicOn);
+    elements.musicIndicator?.classList.toggle('music-on', isMusicOn);
+    if (elements.musicIcon) {
+      elements.musicIcon.src = `${ASSET_BASE}images/${isMusicOn ? 'note-on.png' : 'note-off.png'}`;
     }
-    elements.visual.currentTime = 0;
-    elements.visual.play().catch(() => {});
-  };
-  elements.visual.onended = () => {
+  }
+
+  function ensureAmbientPlaying() {
+    if (ambient.paused) {
+      ambient.play().catch(e => console.warn('Ambient autoplay blocked:', e));
+    }
+  }
+
+  function switchVideo(videoFile, loop = false) {
+    if (!videoFile || !elements.visual) return;
+    const fullPath = `${ASSET_BASE}videos/${videoFile}`;
+    if (elements.visual.src === fullPath) return;
+    elements.visual.style.opacity = 1;
+    elements.visual.loop = loop;
+    elements.visual.muted = true;
+    elements.visual.src = fullPath;
+    elements.visual.load();
+    elements.visual.onloadedmetadata = () => {
+      elements.visual.currentTime = 0;
+      elements.visual.play().catch(e => console.warn('Video play failed:', e));
+      elements.visual.style.opacity = 1;
+    };
+  }
+
+  function loadIdleVideo() {
+    switchVideo('special/idle.mp4', true);
+    currentMouthShape = 'closed';
+    videoHistory = [];
+    lastVideoByShape = {};
+  }
+
+  function loadEndVideo() {
+    switchVideo('special/end.mp4', false);
+    elements.visual.onloadedmetadata = () => {
+      const duration = elements.visual.duration || 0;
+      if (duration > 4) {
+        setTimeout(() => {
+          cheerAudio = new Audio(`${ASSET_BASE}audio/cheers/cheer2.mp3`);
+          cheerAudio.volume = isMuted ? 0 : 0.7;
+          cheerAudio.play().catch(() => {});
+        }, Math.max(0, (duration - 4) * 1000));
+      }
+      elements.visual.currentTime = 0;
+      elements.visual.play().catch(() => {});
+    };
+    elements.visual.onended = () => {
+      loadIdleVideo();
+      ambient.volume = isMusicOn ? 0.3 : 0;
+    };
+  }
+
+  function resetTranscriptPlaceholder() {
+    if (elements.transcript) {
+      elements.transcript.innerHTML = '<span class="transcript-placeholder">Your speech text will appear here.</span>';
+    }
+  }
+
+  function setTranscript(rawText) {
+    if (!elements.transcript) return;
+    elements.transcript.innerHTML = '';
+    if (!rawText?.trim()) return resetTranscriptPlaceholder();
+
+    const cleaned = rawText
+      .replace(/\r\n/g, '\n')
+      .replace(/\[(applause|cheering|pause|pauses?|(excited|angry|shouts?|laughs?|sighs?|whispers?|calm))\]/gi, '')
+      .replace(/\[[^\]]+]/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+      .replace(/\s+\n|\n\s+/g, '\n');
+
+    if (!cleaned) return resetTranscriptPlaceholder();
+
+    const textFlat = cleaned.replace(/\n+/g, ' ');
+    const sentences = textFlat.split(/(?<=[.!?])\s+(?=[A-Z])/).map(s => s.trim()).filter(Boolean);
+
+    if (!sentences.length) {
+      elements.transcript.innerHTML = `<p>${cleaned}</p>`;
+      return;
+    }
+
+    const paragraphs = [];
+    const maxPerPara = 3;
+    for (let i = 0; i < sentences.length; i += maxPerPara) {
+      paragraphs.push(sentences.slice(i, i + maxPerPara).join(' '));
+    }
+    elements.transcript.innerHTML = paragraphs.map(para => `<p>${para}</p>`).join('');
+  }
+
+  function getRandomVideo(shape) {
+    const videos = mouthShapes[shape];
+    if (!videos?.length) return null;
+    let pool = videos.slice();
+    const lastUsed = lastVideoByShape[shape];
+    if (lastUsed && pool.length > 1) pool = pool.filter(v => v !== lastUsed);
+    const candidate = pool[Math.floor(Math.random() * pool.length)];
+    lastVideoByShape[shape] = candidate;
+    videoHistory.push(candidate);
+    if (videoHistory.length > 20) videoHistory.shift();
+    return candidate;
+  }
+
+  function getSmartMouthShape(freqData, timeData) {
+    const volume = timeData.reduce((sum, val) => sum + Math.abs(val - 128), 0) / timeData.length;
+    const lowFreq = freqData.slice(0, 8).reduce((a, b) => a + b, 0) / 8;
+    const midFreq = freqData.slice(8, 32).reduce((a, b) => a + b, 0) / 24;
+    const highFreq = freqData.slice(32, 64).reduce((a, b) => a + b, 0) / 32;
+    if (volume < 3) return 'closed';
+    if (volume < 8) return highFreq > 45 ? 'narrow' : 'neutral';
+    if (volume < 14) return midFreq > 55 ? 'open' : 'neutral';
+    if (volume < 20) return midFreq > 65 ? 'open' : (Math.random() < 0.4 ? 'express' : 'wide_open');
+    return Math.random() < 0.6 ? 'wide_open' : 'express';
+  }
+
+  function syncLipSync(analyser, frequencyData, timeData) {
+    if (!currentSpeechAudio || currentSpeechAudio.paused || isCheering) return;
+    analyser.getByteFrequencyData(frequencyData);
+    analyser.getByteTimeDomainData(timeData);
+    const now = Date.now();
+    const volumeAvg = frequencyData.reduce((a, b) => a + b, 0) / frequencyData.length;
+    let mouthShape = getSmartMouthShape(frequencyData, timeData);
+    if (volumeAvg < 1.5) {
+      lastLowVolumeTime ||= now;
+      if (now - lastLowVolumeTime > 700) mouthShape = 'closed';
+    } else {
+      lastLowVolumeTime = 0;
+    }
+    const minSwitchInterval = 110;
+    if (now - lastSwitchTime >= minSwitchInterval && mouthShape !== currentMouthShape) {
+      const candidate = getRandomVideo(mouthShape);
+      if (candidate) {
+        switchVideo(`mouth-shapes/${candidate}`, false);
+        currentMouthShape = mouthShape;
+        lastSwitchTime = now;
+      }
+    }
+    animationFrameId = requestAnimationFrame(() => syncLipSync(analyser, frequencyData, timeData));
+  }
+
+  function setupLipSync(audio) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return null;
+    const audioCtx = new AudioContextClass();
+    const source = audioCtx.createMediaElementSource(audio);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 256;
+    source.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    const frequencyData = new Uint8Array(analyser.frequencyBinCount);
+    const timeData = new Uint8Array(analyser.fftSize);
+    audio.onplay = () => {
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(() => syncLipSync(analyser, frequencyData, timeData));
+    };
+    audio.onpause = audio.onended = () => cancelAnimationFrame(animationFrameId);
+    return analyser;
+  }
+
+  function playMidCheer(callback) {
+    cancelAnimationFrame(animationFrameId);
+    isCheering = true;
+    const cheerFile = midCheerFiles[Math.floor(Math.random() * midCheerFiles.length)];
+    cheerAudio = new Audio(`${ASSET_BASE}${cheerFile}`);
+    cheerAudio.volume = isMuted ? 0 : 0.7;
+    cheerAudio.play().catch(() => {});
+    setTimeout(() => cheerAudio?.pause(), 6000);
+    const pauseVideo = getRandomVideo('closed');
+    if (pauseVideo) switchVideo(`mouth-shapes/${pauseVideo}`, false);
+    setTimeout(() => {
+      isCheering = false;
+      callback();
+    }, 6000);
+  }
+
+  function endSequence() {
+    loadEndVideo();
+    isIdle = true;
+    if (elements.input) {
+      elements.input.disabled = false;
+      elements.input.value = '';
+    }
+    resetTranscriptPlaceholder();
+  }
+
+  function playNext() {
+    if (currentIndex >= speechAudios.length) return endSequence();
+    currentSpeechAudio = speechAudios[currentIndex];
+    currentSpeechAudio.volume = isMuted ? 0 : 1;
+    setupLipSync(currentSpeechAudio);
+    currentSpeechAudio.play().catch(e => console.warn('Speech playback failed:', e));
+    currentSpeechAudio.onended = () => {
+      currentIndex++;
+      currentIndex < speechAudios.length ? playMidCheer(playNext) : endSequence();
+    };
+  }
+
+  async function generateSpeech() {
+    const prompt = elements.input?.value?.trim();
+    if (!prompt || !isIdle) return;
+    isIdle = false;
+    if (elements.input) elements.input.disabled = true;
+    playClick();
+    elements.loadBar?.classList.add('active');
+    elements.loadText?.classList.add('active');
+    if (elements.transcript) {
+      elements.transcript.innerHTML = '<span class="transcript-placeholder">Generating speech…</span>';
+    }
+
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+      progress = Math.min(100, progress + 7);
+      if (elements.loadProgress) elements.loadProgress.style.width = `${progress}%`;
+    }, 260);
+
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt }),
+      });
+      if (!res.ok) throw new Error(`API error: ${res.status} - ${await res.text()}`);
+      const { audios, transcript } = await res.json();
+      if (!audios?.length) throw new Error('No audio returned');
+
+      setTranscript(transcript || '');
+      speechAudios = audios.map(b64 => new Audio(`data:audio/mp3;base64,${b64}`));
+      currentIndex = 0;
+      ambient.volume = isMusicOn ? 0.1 : 0;
+      playNext();
+    } catch (error) {
+      console.error('Generate speech failed:', error);
+      setTranscript('Error: Could not generate speech.');
+      loadIdleVideo();
+    } finally {
+      elements.loadBar?.classList.remove('active');
+      elements.loadText?.classList.remove('active');
+      clearInterval(progressInterval);
+      if (elements.loadProgress) elements.loadProgress.style.width = '0%';
+      isIdle = true;
+      if (elements.input) elements.input.disabled = false;
+    }
+  }
+
+  // Initial setup
+  updateMusicUI();
+  ensureAmbientPlaying();
+  loadIdleVideo();
+  resetTranscriptPlaceholder();
+
+  // Event listeners
+  elements.pauseBtn?.addEventListener('click', () => {
+    playClick();
+    if (isCheering && cheerAudio) {
+      cheerAudio.paused ? cheerAudio.play().catch(() => {}) : cheerAudio.pause();
+    } else if (currentSpeechAudio) {
+      currentSpeechAudio.paused ? currentSpeechAudio.play().catch(() => {}) : currentSpeechAudio.pause();
+    }
+  });
+
+  elements.muteBtn?.addEventListener('click', () => {
+    playClick();
+    isMuted = !isMuted;
+    if (currentSpeechAudio) currentSpeechAudio.volume = isMuted ? 0 : 1;
+    if (cheerAudio) cheerAudio.volume = isMuted ? 0 : 0.7;
+  });
+
+  elements.musicToggle?.addEventListener('click', () => {
+    playClick();
+    isMusicOn = !isMusicOn;
+    ambient.volume = isMusicOn ? 0.3 : 0;
+    updateMusicUI();
+    if (isMusicOn) ensureAmbientPlaying();
+  });
+
+  elements.lightningBtn?.addEventListener('click', () => {
+    playClick();
+    if (elements.visual) {
+      elements.visual.classList.add('flash-transition');
+      setTimeout(() => elements.visual.classList.remove('flash-transition'), 400);
+    }
+  });
+
+  elements.diceBtn?.addEventListener('click', () => {
+    playClick();
+    const topic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
+    if (elements.input) {
+      elements.input.value = `Give a presidential speech about ${topic}.`;
+      generateSpeech();
+    }
+  });
+
+  elements.stopBtn?.addEventListener('click', () => {
+    playClick();
+    currentSpeechAudio?.pause();
+    if (currentSpeechAudio) currentSpeechAudio.currentTime = 0;
+    cheerAudio?.pause();
+    if (cheerAudio) cheerAudio.currentTime = 0;
+    cancelAnimationFrame(animationFrameId);
     loadIdleVideo();
     ambient.volume = isMusicOn ? 0.3 : 0;
-  };
-}
-
-function resetTranscriptPlaceholder() {
-  elements.transcript.innerHTML = '<span class="transcript-placeholder">Your speech text will appear here.</span>';
-}
-
-function setTranscript(rawText) {
-  elements.transcript.innerHTML = '';
-  if (!rawText?.trim()) return resetTranscriptPlaceholder();
-  const cleaned = rawText
-    .replace(/\r\n/g, '\n')
-    .replace(/\[(applause|cheering|pause|pauses?|(excited|angry|shouts?|laughs?|sighs?|whispers?|calm))\]/gi, '')
-    .replace(/\[[^\]]+]/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-    .replace(/\s+\n|\n\s+/g, '\n');
-  if (!cleaned) return resetTranscriptPlaceholder();
-  const textFlat = cleaned.replace(/\n+/g, ' ');
-  const sentences = textFlat.split(/(?<=[.!?])\s+(?=[A-Z])/).map(s => s.trim()).filter(Boolean);
-  if (!sentences.length) {
-    elements.transcript.innerHTML = `<p>${cleaned}</p>`;
-    return;
-  }
-  const paragraphs = [];
-  const maxPerPara = 3;
-  for (let i = 0; i < sentences.length; i += maxPerPara) {
-    paragraphs.push(sentences.slice(i, i + maxPerPara).join(' '));
-  }
-  elements.transcript.innerHTML = paragraphs.map(para => `<p>${para}</p>`).join('');
-}
-
-function getRandomVideo(shape) {
-  const videos = mouthShapes[shape];
-  if (!videos?.length) return null;
-  let pool = videos.slice();
-  const lastUsed = lastVideoByShape[shape];
-  if (lastUsed && pool.length > 1) pool = pool.filter(v => v !== lastUsed);
-  const candidate = pool[Math.floor(Math.random() * pool.length)];
-  lastVideoByShape[shape] = candidate;
-  videoHistory.push(candidate);
-  if (videoHistory.length > 20) videoHistory.shift();
-  return candidate;
-}
-
-function getSmartMouthShape(freqData, timeData) {
-  const volume = timeData.reduce((sum, val) => sum + Math.abs(val - 128), 0) / timeData.length;
-  const lowFreq = freqData.slice(0, 8).reduce((a, b) => a + b, 0) / 8;
-  const midFreq = freqData.slice(8, 32).reduce((a, b) => a + b, 0) / 24;
-  const highFreq = freqData.slice(32, 64).reduce((a, b) => a + b, 0) / 32;
-  if (volume < 3) return 'closed';
-  if (volume < 8) return highFreq > 45 ? 'narrow' : 'neutral';
-  if (volume < 14) return midFreq > 55 ? 'open' : 'neutral';
-  if (volume < 20) return midFreq > 65 ? 'open' : (Math.random() < 0.4 ? 'express' : 'wide_open');
-  return Math.random() < 0.6 ? 'wide_open' : 'express';
-}
-
-function syncLipSync(analyser, frequencyData, timeData) {
-  if (!currentSpeechAudio || currentSpeechAudio.paused || isCheering) return;
-  analyser.getByteFrequencyData(frequencyData);
-  analyser.getByteTimeDomainData(timeData);
-  const now = Date.now();
-  const volumeAvg = frequencyData.reduce((a, b) => a + b, 0) / frequencyData.length;
-  let mouthShape = getSmartMouthShape(frequencyData, timeData);
-  if (volumeAvg < 1.5) {
-    lastLowVolumeTime ||= now;
-    if (now - lastLowVolumeTime > 700) mouthShape = 'closed';
-  } else {
-    lastLowVolumeTime = 0;
-  }
-  const minSwitchInterval = 110;
-  if (now - lastSwitchTime >= minSwitchInterval && mouthShape !== currentMouthShape) {
-    const candidate = getRandomVideo(mouthShape);
-    if (candidate) {
-      switchVideo(candidate, false);
-      currentMouthShape = mouthShape;
-      lastSwitchTime = now;
-    }
-  }
-  animationFrameId = requestAnimationFrame(() => syncLipSync(analyser, frequencyData, timeData));
-}
-
-function setupLipSync(audio) {
-  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContextClass) return null;
-  const audioCtx = new AudioContextClass();
-  const source = audioCtx.createMediaElementSource(audio);
-  const analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 256;
-  source.connect(analyser);
-  analyser.connect(audioCtx.destination);
-  const frequencyData = new Uint8Array(analyser.frequencyBinCount);
-  const timeData = new Uint8Array(analyser.fftSize);
-  audio.onplay = () => {
-    cancelAnimationFrame(animationFrameId);
-    animationFrameId = requestAnimationFrame(() => syncLipSync(analyser, frequencyData, timeData));
-  };
-  audio.onpause = audio.onended = () => cancelAnimationFrame(animationFrameId);
-  return analyser;
-}
-
-function playMidCheer(callback) {
-  cancelAnimationFrame(animationFrameId);
-  isCheering = true;
-  const cheerFile = midCheerFiles[Math.floor(Math.random() * midCheerFiles.length)];
-  cheerAudio = new Audio(`${ASSET_BASE}audio/${cheerFile}`);
-  cheerAudio.volume = isMuted ? 0 : 0.7;
-  cheerAudio.play().catch(() => {});
-  setTimeout(() => cheerAudio?.pause(), 6000);
-  const pauseVideo = getRandomVideo('closed');
-  if (pauseVideo) switchVideo(`mouth-shapes/${pauseVideo}`, false);
-  setTimeout(() => {
     isCheering = false;
-    callback();
-  }, 6000);
-}
-
-function endSequence() {
-  loadEndVideo();
-  isIdle = true;
-  elements.input.disabled = false;
-  elements.input.value = '';
-  resetTranscriptPlaceholder();
-}
-
-function playNext() {
-  if (currentIndex >= speechAudios.length) return endSequence();
-  currentSpeechAudio = speechAudios[currentIndex];
-  currentSpeechAudio.volume = isMuted ? 0 : 1;
-  setupLipSync(currentSpeechAudio);
-  currentSpeechAudio.play().catch(() => {});
-  currentSpeechAudio.onended = () => {
-    currentIndex++;
-    currentIndex < speechAudios.length ? playMidCheer(playNext) : endSequence();
-  };
-}
-
-async function generateSpeech() {
-  const prompt = elements.input.value.trim();
-  if (!prompt || !isIdle) return;
-  isIdle = false;
-  elements.input.disabled = true;
-  playClick();
-  elements.loadBar.classList.add('active');
-  elements.loadText.classList.add('active');
-  elements.transcript.innerHTML = '<span class="transcript-placeholder">Generating speech…</span>';
-  let progress = 0;
-  const progressInterval = setInterval(() => {
-    progress = Math.min(100, progress + 7);
-    elements.loadProgress.style.width = `${progress}%`;
-  }, 260);
-  try {
-    const res = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt }),
-    });
-    if (!res.ok) throw new Error(`API failed: ${res.status} – ${await res.text()}`);
-    const { audios, transcript } = await res.json();
-    if (!audios?.length) throw new Error('No audio generated from API');
-    setTranscript(transcript || '');
-    speechAudios = audios.map(b64 => new Audio(`data:audio/mp3;base64,${b64}`));
-    currentIndex = 0;
-    ambient.volume = isMusicOn ? 0.1 : 0;
-    playNext();
-  } catch (error) {
-    console.error('Speech generation error:', error);
-    setTranscript('Error: Could not generate speech.');
-    loadIdleVideo();
-  } finally {
-    elements.loadBar.classList.remove('active');
-    elements.loadText.classList.remove('active');
-    clearInterval(progressInterval);
-    elements.loadProgress.style.width = '0%';
     isIdle = true;
-    elements.input.disabled = false;
-  }
-}
+    if (elements.input) {
+      elements.input.disabled = false;
+    }
+    currentIndex = speechAudios.length;
+    resetTranscriptPlaceholder();
+  });
 
-// Initial setup
-updateMusicUI();
-ensureAmbientPlaying();
-loadIdleVideo();
-resetTranscriptPlaceholder();
-
-// UI handlers with consistent addEventListener
-elements.pauseBtn.addEventListener('click', () => {
-  playClick();
-  if (isCheering && cheerAudio) {
-    cheerAudio.paused ? cheerAudio.play().catch(() => {}) : cheerAudio.pause();
-  } else if (currentSpeechAudio) {
-    currentSpeechAudio.paused ? currentSpeechAudio.play().catch(() => {}) : currentSpeechAudio.pause();
-  }
+  elements.input?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') generateSpeech();
+  });
 });
-
-elements.muteBtn.addEventListener('click', () => {
-  playClick();
-  isMuted = !isMuted;
-  if (currentSpeechAudio) currentSpeechAudio.volume = isMuted ? 0 : 1;
-  if (cheerAudio) cheerAudio.volume = isMuted ? 0 : 0.7;
-});
-
-elements.musicToggle.addEventListener('click', () => {
-  playClick();
-  isMusicOn = !isMusicOn;
-  ambient.volume = isMusicOn ? 0.3 : 0;
-  updateMusicUI();
-  if (isMusicOn) ensureAmbientPlaying();
-});
-
-elements.lightningBtn.addEventListener('click', () => {
-  playClick();
-  elements.visual.classList.add('flash-transition');
-  setTimeout(() => elements.visual.classList.remove('flash-transition'), 400);
-});
-
-elements.diceBtn.addEventListener('click', () => {
-  playClick();
-  const topic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
-  elements.input.value = `Give a presidential speech about ${topic}.`;
-  generateSpeech();
-});
-
-elements.stopBtn.addEventListener('click', () => {
-  playClick();
-  currentSpeechAudio?.pause();
-  if (currentSpeechAudio) currentSpeechAudio.currentTime = 0;
-  cheerAudio?.pause();
-  if (cheerAudio) cheerAudio.currentTime = 0;
-  cancelAnimationFrame(animationFrameId);
-  loadIdleVideo();
-  ambient.volume = isMusicOn ? 0.3 : 0;
-  isCheering = false;
-  isIdle = true;
-  elements.input.disabled = false;
-  currentIndex = speechAudios.length;
-  resetTranscriptPlaceholder();
-});
-
-elements.input.addEventListener('keydown', e => e.key === 'Enter' && generateSpeech());
