@@ -20,12 +20,10 @@
       --font-mono: 'Space Mono', 'Courier New', monospace;
     }
 
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       height: 100%;
-      margin: 0;
-      padding: 0;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
@@ -52,7 +50,7 @@
       border: 1px solid rgba(5, 255, 161, 0.25);
       box-shadow: 0 0 18px rgba(0, 0, 0, 0.8), 0 0 32px rgba(5, 255, 161, 0.15);
       border-radius: 14px;
-      padding: 10px 18px 12px;
+      padding: 8px 16px 10px;
       position: relative;
       overflow: hidden;
       backdrop-filter: blur(4px);
@@ -176,22 +174,22 @@
     .layout-row {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr);
-      gap: 12px;
+      gap: 10px;
       align-items: stretch;
       position: relative;
       z-index: 1;
       flex: 1;
     }
 
-    .side-rail { display: flex; flex-direction: column; gap: 10px; }
+    .side-rail { display: flex; flex-direction: column; gap: 8px; }
     .lower-side-card { flex: 1; }
-    .center-column { display: flex; flex-direction: column; gap: 12px; }
+    .center-column { display: flex; flex-direction: column; gap: 10px; }
 
     .frame {
       position: relative;
       width: 100%;
       aspect-ratio: 16 / 9;
-      max-height: 82vh;
+      max-height: 85vh;
       margin-inline: auto;
       border-radius: 12px;
       border: 1px solid var(--frame-border);
@@ -225,65 +223,64 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      filter: brightness(1.6) saturate(1.25) contrast(1.6);
+      filter: brightness(1.4) saturate(1.2) contrast(1.4);
       transition: opacity 0.08s ease, filter 0.1s ease;
     }
 
     .video-overlay {
       position: absolute;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      padding: 60px 40px 40px;
+      inset: 0 0 0 0;
+      padding: 40px 30px 30px;
       display: flex;
       justify-content: center;
+      align-items: flex-end;
       pointer-events: none;
       z-index: 3;
-      background: linear-gradient(to top, rgba(2,3,8,0.95), rgba(2,3,8,0.6) 50%, transparent 80%);
+      background: linear-gradient(to top, rgba(2,3,8,0.9), rgba(2,3,8,0.5) 50%, transparent 80%);
     }
 
     .title-block {
       text-align: center;
-      margin: 0;
+      max-width: 80%;
     }
 
     .title-block h1 {
-      margin: 0 0 8px;
-      font-size: clamp(2.4rem, 4vw, 3.4rem);
-      letter-spacing: 0.24em;
+      margin: 0 0 6px;
+      font-size: clamp(2.6rem, 4.5vw, 3.6rem);
+      letter-spacing: 0.2em;
       text-transform: uppercase;
       color: var(--accent-color);
-      text-shadow: 0 0 10px rgba(0,240,255,0.9), 0 0 24px rgba(5,255,161,0.9);
-      animation: title-glow 2.3s ease-in-out infinite alternate;
+      text-shadow: 0 0 8px rgba(0,240,255,0.9), 0 0 20px rgba(5,255,161,0.9);
+      animation: title-glow 2s ease-in-out infinite alternate;
     }
 
     @keyframes title-glow {
       0% { text-shadow: 0 0 6px rgba(0,240,255,0.8), 0 0 16px rgba(5,255,161,0.75); }
-      100% { text-shadow: 0 0 14px rgba(0,240,255,1), 0 0 32px rgba(5,255,161,1), 0 0 46px rgba(5,255,161,0.9); }
+      100% { text-shadow: 0 0 12px rgba(0,240,255,1), 0 0 28px rgba(5,255,161,1); }
     }
 
     .title-block p {
-      margin: 8px 0;
-      font-size: 1rem;
-      letter-spacing: 0.12em;
+      margin: 6px 0;
+      font-size: 1.1rem;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--muted-color);
-      opacity: 0.9;
+      color: var(--text-color);
+      opacity: 0.95;
     }
 
     .subtitle-chip {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      margin-top: 12px;
-      padding: 4px 10px;
+      gap: 6px;
+      margin-top: 8px;
+      padding: 3px 8px;
       border-radius: 999px;
-      border: 1px solid rgba(0,240,255,0.35);
-      font-size: 0.7rem;
-      letter-spacing: 0.16em;
+      border: 1px solid rgba(0,240,255,0.4);
+      font-size: 0.75rem;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
       color: var(--accent-color);
-      background: radial-gradient(circle, rgba(0,240,255,0.18), transparent 60%);
+      background: radial-gradient(circle, rgba(0,240,255,0.15), transparent 60%);
     }
 
     #load-bar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; height: 16px; border-radius: 999px; border: 1px solid rgba(5,255,161,0.7); background: radial-gradient(circle, rgba(0,240,255,0.14), rgba(0,0,0,0.9)); box-shadow: 0 0 16px rgba(5,255,161,0.8), 0 0 32px rgba(0,240,255,0.45); overflow: hidden; display: none; z-index: 4; }
@@ -311,8 +308,8 @@
     #terminal {
       display: flex;
       align-items: center;
-      padding: 10px 14px;
-      gap: 8px;
+      padding: 8px 12px;
+      gap: 6px;
       cursor: text;
       border-bottom: 1px solid rgba(5,255,161,0.3);
     }
@@ -346,8 +343,8 @@
       display: flex;
       justify-content: center;
       flex-wrap: wrap;
-      gap: 16px;
-      padding: 10px 14px 12px;
+      gap: 12px;
+      padding: 8px 12px 10px;
       position: relative;
       z-index: 1;
     }
@@ -368,7 +365,7 @@
     .side-card {
       border-radius: 10px;
       border: 1px solid rgba(0,240,255,0.45);
-      padding: 10px 12px;
+      padding: 8px 10px;
       background: radial-gradient(circle at 0 0, rgba(0,240,255,0.16), transparent 55%),
                   radial-gradient(circle at 100% 100%, rgba(5,255,161,0.16), transparent 55%), rgba(0,0,0,0.92);
       box-shadow: 0 0 18px rgba(0,240,255,0.35);
@@ -376,9 +373,9 @@
     }
 
     .side-card h2 {
-      margin: 0 0 8px;
-      font-size: 0.8rem;
-      letter-spacing: 0.16em;
+      margin: 0 0 6px;
+      font-size: 0.85rem;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
       color: var(--accent-color);
     }
@@ -386,14 +383,14 @@
     .side-card p {
       margin: 4px 0;
       line-height: 1.4;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       color: var(--muted-color);
     }
 
     .side-card ul {
       list-style: none;
       padding: 0;
-      margin: 6px 0 0;
+      margin: 4px 0 0;
     }
 
     .side-card li {
@@ -402,7 +399,7 @@
       align-items: center;
       gap: 6px;
       color: var(--muted-color);
-      font-size: 0.8rem;
+      font-size: 0.85rem;
     }
 
     .side-bullet {
@@ -418,31 +415,31 @@
     .transcript-card { display: flex; flex-direction: column; }
 
     .transcript-body {
-      margin-top: 6px;
-      padding: 8px;
+      margin-top: 4px;
+      padding: 6px;
       border-radius: 8px;
       background: rgba(0, 0, 0, 0.9);
       border: 1px solid rgba(5,255,161,0.35);
-      max-height: 40vh;
+      max-height: 45vh;
       overflow: auto;
-      font-size: 0.82rem;
-      line-height: 1.6;
+      font-size: 0.85rem;
+      line-height: 1.5;
       color: #bdfedf;
       word-wrap: break-word;
     }
 
-    .transcript-body p { margin: 0 0 0.55em; }
+    .transcript-body p { margin: 0 0 0.5em; }
     .transcript-body p:last-child { margin-bottom: 0; }
     .transcript-placeholder { opacity: 0.7; font-style: italic; }
 
     .site-footer {
       flex-shrink: 0;
       width: 100%;
-      padding: 8px 20px 10px;
+      padding: 6px 16px 8px;
       color: rgba(255,255,255,0.9);
       text-align: center;
-      font-size: 0.85rem;
-      letter-spacing: 0.12em;
+      font-size: 0.9rem;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       border-top: 1px solid rgba(255,255,255,0.08);
       background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.5));
@@ -451,24 +448,26 @@
     .brand-white { color: #00f0ff; }
 
     @media (max-width: 1200px) {
-      .layout-row { grid-template-columns: minmax(0, 1fr) minmax(0, 2.5fr) minmax(0, 1fr); }
+      .layout-row { grid-template-columns: minmax(0, 1fr) minmax(0, 2.5fr) minmax(0, 1fr); gap: 8px; }
     }
 
     @media (max-width: 960px) {
-      .layout-row { grid-template-columns: minmax(0,1fr); }
+      .layout-row { grid-template-columns: minmax(0,1fr); gap: 6px; }
       .side-rail { flex-direction: row; flex-wrap: wrap; }
       .transcript-card { width: 100%; }
-      .frame { max-height: 60vh; }
-      .video-overlay { padding: 40px 20px 30px; }
+      .frame { max-height: 65vh; }
+      .video-overlay { padding: 30px 15px 20px; }
     }
 
     @media (max-width: 640px) {
-      body { gap: 4px; }
-      .chrome-frame { padding: 8px 6px 12px; }
-      .chrome-title { font-size: 0.75rem; letter-spacing: 0.12em; }
-      .music-toggle, .control-button { width: 50px; height: 50px; }
-      .control-buttons { gap: 10px; }
-      .video-overlay { padding: 30px 15px 25px; }
+      body { gap: 2px; }
+      .chrome-frame { padding: 6px 10px 8px; }
+      .chrome-title { font-size: 0.8rem; letter-spacing: 0.12em; }
+      .music-toggle, .control-button { width: 48px; height: 48px; }
+      .control-buttons { gap: 8px; }
+      .video-overlay { padding: 20px 10px 15px; }
+      .title-block h1 { font-size: clamp(2rem, 6vw, 2.8rem); }
+      .title-block p { font-size: 0.95rem; }
     }
   </style>
 </head>
@@ -477,7 +476,7 @@
     <div class="chrome-frame">
       <div class="chrome-header">
         <button id="music-toggle" class="music-toggle music-on" aria-label="Toggle background music">
-          <img id="music-icon" src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/note-on.png" alt="Music">
+          <img id="music-icon" src="/assets/images/note-on.png" alt="Music">
           <span class="music-indicator music-on"></span>
         </button>
         <div class="chrome-title">DONALD.AI // PRESIDENTIAL SPEECH ENGINE</div>
@@ -525,19 +524,19 @@
             </div>
             <div class="control-buttons">
               <button id="pause-btn" class="control-button" aria-label="Pause / resume speech">
-                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/pause.png" alt="Pause">
+                <img src="/assets/images/pause.png" alt="Pause">
               </button>
               <button id="mute-btn" class="control-button" aria-label="Mute speech audio">
-                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/mute.png" alt="Mute">
+                <img src="/assets/images/mute.png" alt="Mute">
               </button>
               <button id="lightning-btn" class="control-button" aria-label="Flash effect">
-                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/create.png" alt="Flash">
+                <img src="/assets/images/create.png" alt="Flash">
               </button>
               <button id="dice-btn" class="control-button" aria-label="Random topic">
-                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/random.png" alt="Random topic">
+                <img src="/assets/images/random.png" alt="Random topic">
               </button>
               <button id="stop-btn" class="control-button" aria-label="Stop speech">
-                <img src="https://raw.githubusercontent.com/cybergod-duck/donald.ai/main/stop.png" alt="Stop">
+                <img src="/assets/images/stop.png" alt="Stop">
               </button>
             </div>
           </div>
@@ -567,6 +566,6 @@
     <span>Certified by <span class="brand-white">Simple As That</span></span>
   </footer>
 
-  <script src="script.js"></script>
+  <script src="/script.js"></script>
 </body>
 </html>
