@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const ASSET_BASE = '/assets/';
 
-  // Safe element lookup
+  // Safe element lookup with logging
   const getEl = id => document.getElementById(id) || console.warn(`Missing element: #${id}`);
 
   const elements = {
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     musicIcon: getEl('music-icon'),
   };
 
-  // Preload all critical media
+  // Preload critical media
   const clickSound = new Audio(`${ASSET_BASE}audio/click.mp3`);
   clickSound.preload = 'auto';
   const ambient = new Audio(`${ASSET_BASE}audio/drone.mp3`);
@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentIndex = 0;
   let hasUserInteracted = false;
 
-  // Detect first user interaction to unlock full media
+  // Unlock media on first gesture (required for unmuted playback)
   const unlockMedia = () => {
     if (!hasUserInteracted) {
       hasUserInteracted = true;
@@ -71,28 +71,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const midCheerFiles = ['audio/cheers/cheer1.mp3', 'audio/cheers/cheer3.mp3', 'audio/cheers/cheer4.mp3', 'audio/cheers/cheer5.mp3'];
 
-  const randomTopics = [ /* unchanged */ ];
+  const randomTopics = [
+    'the future of artificial intelligence and American jobs',
+    'the southern border and immigration policy',
+    'bringing manufacturing back to the United States',
+    'energy independence and drilling in America',
+    'law and order in our great cities',
+    'freedom of speech and cancel culture',
+    'the role of social media in politics',
+    'protecting the Second Amendment',
+    'healthcare reform for American families',
+    'cutting taxes for the middle class',
+    'trade deals with China and other countries',
+    'rebuilding the U.S. military and veterans care',
+    'election integrity and voter ID laws',
+    'space exploration and sending Americans to Mars',
+    'education, school choice, and parents\' rights',
+    'the national debt and government spending',
+    'crime, policing, and public safety',
+    'infrastructure, roads, and beautiful new airports',
+    'big tech monopolies and antitrust action',
+    'the Supreme Court and the Constitution',
+    'American farmers and the heartland',
+    'NATO, foreign policy, and alliances',
+    'border security and the wall',
+    'inflation, interest rates, and the economy',
+    'American energy, coal, oil, and gas',
+    'corruption in Washington, D.C.',
+    'supporting police and first responders',
+    'freedom of religion in America',
+    'protecting American workers from outsourcing',
+    'American small businesses and entrepreneurship',
+    'veterans, the VA, and honoring our heroes',
+    'the future of American space leadership',
+    'strengthening American infrastructure coast to coast',
+  ];
 
   function playClick() {
     clickSound.currentTime = 0;
-    clickSound.play().catch(e => console.log('Click blocked:', e.message));
+    clickSound.play().catch(e => console.warn('Click blocked:', e.message));
   }
 
   function updateMusicUI() {
     elements.musicToggle?.classList.toggle('music-on', isMusicOn);
     elements.musicIndicator?.classList.toggle('music-on', isMusicOn);
-    if (elements.musicIcon) elements.musicIcon.src = `${ASSET_BASE}images/${isMusicOn ? 'note-on.png' : 'note-off.png'}`;
+    elements.musicIcon && (elements.musicIcon.src = `${ASSET_BASE}images/${isMusicOn ? 'note-on.png' : 'note-off.png'}`);
   }
 
   function ensureAmbientPlaying() {
-    ambient.play().catch(e => console.log('Ambient blocked:', e.message));
+    ambient.play().catch(e => console.warn('Ambient blocked:', e.message));
   }
 
   function switchVideo(videoFile, loop = false) {
-    if (!videoFile || !elements.visual) return console.warn('No visual element for video');
+    if (!videoFile || !elements.visual) return console.warn('No visual for video switch');
     const fullPath = `${ASSET_BASE}videos/${videoFile}`;
     if (elements.visual.src === fullPath) return;
-    console.log('Switching to:', fullPath);
+    console.log('Switching video to:', fullPath);
     elements.visual.style.opacity = 1;
     elements.visual.loop = loop;
     elements.visual.muted = true;
@@ -100,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.visual.load();
     elements.visual.onloadedmetadata = () => {
       elements.visual.currentTime = 0;
-      elements.visual.play().catch(e => console.log('Video play blocked:', e.message));
+      elements.visual.play().catch(e => console.warn('Video play blocked:', e.message));
       elements.visual.style.opacity = 1;
     };
     elements.visual.onerror = e => console.error('Video load error:', e);
@@ -265,12 +299,17 @@ document.addEventListener('DOMContentLoaded', () => {
   function playNext() {
     if (currentIndex >= speechAudios.length) return endSequence();
     currentSpeechAudio = speechAudios[currentIndex];
+    if (!currentSpeechAudio) return console.error('No current speech audio');
     currentSpeechAudio.volume = isMuted ? 0 : 1;
     setupLipSync(currentSpeechAudio);
     currentSpeechAudio.play().catch(e => console.warn('Speech play blocked:', e.message));
     currentSpeechAudio.onended = () => {
       currentIndex++;
-      currentIndex < speechAudios.length ? playMidCheer(playNext) : endSequence();
+      if (currentIndex < speechAudios.length) {
+        playMidCheer(playNext);
+      } else {
+        endSequence();
+      }
     };
   }
 
@@ -301,9 +340,9 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(`API error ${res.status}: ${err}`);
       }
       const { audios, transcript } = await res.json();
-      if (!audios?.length) throw new Error('No audio returned from API');
+      if (!audios?.length) throw new Error('No audio chunks returned from API');
 
-      setTranscript(transcript || '');
+      setTranscript(transcript || 'Speech generated (no transcript returned)');
       speechAudios = audios.map(b64 => {
         const a = new Audio(`data:audio/mp3;base64,${b64}`);
         a.preload = 'auto';
@@ -313,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ambient.volume = isMusicOn ? 0.1 : 0;
       playNext();
     } catch (error) {
-      console.error('Generate failed:', error.message);
+      console.error('Generate speech failed:', error.message);
       setTranscript(`Error: ${error.message || 'Could not generate speech'}`);
       loadIdleVideo();
     } finally {
@@ -394,24 +433,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Loading bar animation fix: make it pulse more realistically
+  // Realistic loading bar animation (non-linear, more natural feel)
   const fakeLoadPulse = () => {
     if (elements.loadBar?.classList.contains('active')) {
       let p = 0;
       const int = setInterval(() => {
-        p += Math.random() * 12 + 3;
-        if (p > 95) p = 95;
+        p += Math.random() * 10 + 4; // Random increment for realism
+        if (p > 98) p = 98;
         elements.loadProgress.style.width = `${p}%`;
-        if (p >= 95) clearInterval(int);
-      }, 180);
+        if (p >= 98) clearInterval(int);
+      }, 220);
     }
   };
 
-  // Call on load bar show
-  const origAddActive = elements.loadBar?.classList.add;
-  if (origAddActive) {
+  // Hook into load bar activation
+  const origAdd = elements.loadBar?.classList.add;
+  if (origAdd) {
     elements.loadBar.classList.add = function(...args) {
-      origAddActive.apply(this, args);
+      origAdd.apply(this, args);
       if (args.includes('active')) fakeLoadPulse();
     };
   }
