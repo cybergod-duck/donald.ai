@@ -41,15 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentMouthShape = 'closed';
   const lastVideoByShape = {};
   const videoHistory = [];
-  let speechAudios = [];
-  let currentIndex = 0;
   let hasUserInteracted = false;
   const unlockMedia = async () => {
     if (hasUserInteracted) return;
     hasUserInteracted = true;
     console.log('User gesture detected - unlocking media');
-    await ambient.play().catch(() => {});
-    if (elements.visual?.paused) await elements.visual.play().catch(() => {});
+    await ambient.play().catch(e => console.error('Ambient play failed:', e));
+    if (elements.visual?.paused) await elements.visual.play().catch(e => console.error('Video play failed:', e));
   };
   document.addEventListener('click', unlockMedia, { once: true });
   document.addEventListener('keydown', unlockMedia, { once: true });
@@ -147,11 +145,11 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
           cheerAudio = new Audio(`${ASSET_BASE}audio/cheers/cheer2.mp3`);
           cheerAudio.volume = isMuted ? 0 : 0.7;
-          cheerAudio.play().catch(() => {});
+          cheerAudio.play().catch(e => console.warn('Cheer blocked:', e.message));
         }, Math.max(0, (duration - 4) * 1000));
       }
       elements.visual.currentTime = 0;
-      elements.visual.play().catch(() => {});
+      elements.visual.play().catch(e => console.warn('Video play blocked:', e.message));
     };
     elements.visual.onended = () => {
       loadIdleVideo();
@@ -279,28 +277,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     resetTranscriptPlaceholder();
   }
-  async function playNext() {
-    if (currentIndex >= speechAudios.length) return endSequence();
-    currentSpeechAudio = speechAudios[currentIndex];
-    if (!currentSpeechAudio) return console.error('No current speech audio');
-    currentSpeechAudio.volume = isMuted ? 0 : 1;
-    await setupLipSync(currentSpeechAudio);
+  async function playSpeech(audioChunks, transcript) {
     try {
+      const blobs = audioChunks.map(b64 => new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], { type: 'audio/mpeg' }));
+      const fullBlob = new Blob(blobs, { type: 'audio/mpeg' });
+      const audioUrl = URL.createObjectURL(fullBlob);
+      currentSpeechAudio = new Audio(audioUrl);
+      currentSpeechAudio.volume = isMuted ? 0 : 1;
+      await setupLipSync(currentSpeechAudio);
       await currentSpeechAudio.play();
       hideLoadingBar();
+      currentSpeechAudio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        endSequence();
+      };
     } catch (e) {
-      console.warn('Speech play blocked:', e.message);
+      console.error('Speech playback failed:', e);
       hideLoadingBar();
       loadIdleVideo();
     }
-    currentSpeechAudio.onended = () => {
-      currentIndex++;
-      if (currentIndex < speechAudios.length) {
-        playMidCheer(playNext);
-      } else {
-        endSequence();
-      }
-    };
   }
   function hideLoadingBar() {
     elements.loadBar?.classList.remove('active');
@@ -327,18 +322,17 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
       });
-      if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
-      const { audios, transcript } = await res.json();
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`API error ${res.status}: ${errText}`);
+      }
+      const data = await res.json();
+      console.log('API response:', data); // Log full response for debugging
+      const { audios, transcript } = data;
       if (!audios?.length) throw new Error('No audio chunks returned from API');
       setTranscript(transcript || 'Speech generated (no transcript returned)');
-      speechAudios = audios.map(b64 => {
-        const a = new Audio(`data:audio/mpeg;base64,${b64}`);
-        a.preload = 'auto';
-        return a;
-      });
-      currentIndex = 0;
       ambient.volume = isMusicOn ? 0.1 : 0;
-      await playNext();
+      await playSpeech(audios, transcript);
     } catch (error) {
       console.error('Generate speech failed:', error.message);
       setTranscript(`Error: ${error.message || 'Could not generate speech'}`);
@@ -401,7 +395,6 @@ document.addEventListener('DOMContentLoaded', () => {
     isCheering = false;
     isIdle = true;
     if (elements.input) elements.input.disabled = false;
-    currentIndex = speechAudios.length;
     resetTranscriptPlaceholder();
     hideLoadingBar();
   });
