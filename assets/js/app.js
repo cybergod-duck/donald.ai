@@ -17,8 +17,8 @@ const elements = {
   musicIcon: document.getElementById('music-icon'),
 };
 
-const clickSound = new Audio(ASSET_BASE + 'audio/click.mp3');
-const ambient = new Audio(ASSET_BASE + 'audio/drone.mp3');
+const clickSound = new Audio(`${ASSET_BASE}audio/click.mp3`);
+const ambient = new Audio(`${ASSET_BASE}audio/drone.mp3`);
 ambient.loop = true;
 ambient.volume = 0.3;
 
@@ -38,15 +38,15 @@ let speechAudios = [];
 let currentIndex = 0;
 
 const mouthShapes = {
-  closed: ['videos/pause1.mp4', 'videos/pause2.mp4', 'videos/pause3.mp4', 'videos/pause4.mp4', 'videos/pause5.mp4'],
-  narrow: ['videos/1.mp4', 'videos/2.mp4', 'videos/3.mp4', 'videos/4.mp4'],
-  neutral: ['videos/5.mp4', 'videos/6.mp4', 'videos/7.mp4', 'videos/8.mp4'],
-  open: ['videos/9.mp4', 'videos/10.mp4', 'videos/11.mp4', 'videos/12.mp4', 'videos/13.mp4', 'videos/14.mp4'],
-  wide_open: ['videos/wide1.mp4', 'videos/wide2.mp4', 'videos/wide3.mp4', 'videos/wide4.mp4', 'videos/wide5.mp4'],
-  express: ['videos/express1.mp4', 'videos/express2.mp4', 'videos/express3.mp4', 'videos/express4.mp4', 'videos/express5.mp4', 'videos/express6.mp4'],
+  closed: ['mouth-shapes/pause1.mp4', 'mouth-shapes/pause2.mp4', 'mouth-shapes/pause3.mp4', 'mouth-shapes/pause4.mp4', 'mouth-shapes/pause5.mp4'],
+  narrow: ['mouth-shapes/1.mp4', 'mouth-shapes/2.mp4', 'mouth-shapes/3.mp4', 'mouth-shapes/4.mp4'],
+  neutral: ['mouth-shapes/5.mp4', 'mouth-shapes/6.mp4', 'mouth-shapes/7.mp4', 'mouth-shapes/8.mp4'],
+  open: ['mouth-shapes/9.mp4', 'mouth-shapes/10.mp4', 'mouth-shapes/11.mp4', 'mouth-shapes/12.mp4', 'mouth-shapes/13.mp4', 'mouth-shapes/14.mp4'],
+  wide_open: ['mouth-shapes/wide1.mp4', 'mouth-shapes/wide2.mp4', 'mouth-shapes/wide3.mp4', 'mouth-shapes/wide4.mp4', 'mouth-shapes/wide5.mp4'],
+  express: ['mouth-shapes/express1.mp4', 'mouth-shapes/express2.mp4', 'mouth-shapes/express3.mp4', 'mouth-shapes/express4.mp4', 'mouth-shapes/express5.mp4', 'mouth-shapes/express6.mp4'],
 };
 
-const midCheerFiles = ['audio/cheers/cheer1.mp3', 'audio/cheers/cheer3.mp3', 'audio/cheers/cheer4.mp3', 'audio/cheers/cheer5.mp3'];
+const midCheerFiles = ['cheers/cheer1.mp3', 'cheers/cheer3.mp3', 'cheers/cheer4.mp3', 'cheers/cheer5.mp3'];
 
 const randomTopics = [
   'the future of artificial intelligence and American jobs',
@@ -100,11 +100,11 @@ function ensureAmbientPlaying() {
 }
 
 function switchVideo(videoFile, loop = false) {
-  if (!videoFile || elements.visual.src === ASSET_BASE + videoFile) return;
+  if (!videoFile || elements.visual.src.endsWith(videoFile)) return;
   elements.visual.style.opacity = 1;
   elements.visual.loop = loop;
   elements.visual.muted = true;
-  elements.visual.src = ASSET_BASE + videoFile;
+  elements.visual.src = `${ASSET_BASE}videos/${videoFile}`;
   elements.visual.load();
   elements.visual.onloadedmetadata = () => {
     elements.visual.currentTime = 0;
@@ -114,14 +114,14 @@ function switchVideo(videoFile, loop = false) {
 }
 
 function loadIdleVideo() {
-  switchVideo('videos/idle.mp4', true);
+  switchVideo('special/idle.mp4', true);
   currentMouthShape = 'closed';
   videoHistory = [];
   lastVideoByShape = {};
 }
 
 function loadEndVideo() {
-  switchVideo('videos/end.mp4', false);
+  switchVideo('special/end.mp4', false);
   elements.visual.onloadedmetadata = () => {
     const duration = elements.visual.duration || 0;
     if (duration > 4) {
@@ -242,12 +242,12 @@ function playMidCheer(callback) {
   cancelAnimationFrame(animationFrameId);
   isCheering = true;
   const cheerFile = midCheerFiles[Math.floor(Math.random() * midCheerFiles.length)];
-  cheerAudio = new Audio(ASSET_BASE + cheerFile);
+  cheerAudio = new Audio(`${ASSET_BASE}audio/${cheerFile}`);
   cheerAudio.volume = isMuted ? 0 : 0.7;
   cheerAudio.play().catch(() => {});
   setTimeout(() => cheerAudio?.pause(), 6000);
   const pauseVideo = getRandomVideo('closed');
-  if (pauseVideo) switchVideo(pauseVideo, false);
+  if (pauseVideo) switchVideo(`mouth-shapes/${pauseVideo}`, false);
   setTimeout(() => {
     isCheering = false;
     callback();
