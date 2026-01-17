@@ -29,12 +29,12 @@ const mimeTypes = {
 
 const server = createServer(async (req, res) => {
   try {
-    // Normalize URL path, remove query string, and default to index.html
+    // Normalize path, strip query, default to index.html
     let filePath = normalize(req.url.split('?')[0].replace(/^\/+/, ''));
     if (!filePath || filePath === '/') filePath = 'index.html';
 
     const fullPath = join(__dirname, filePath);
-    const fileStats = await stat(fullPath); // Early stat for existence and size
+    const fileStats = await stat(fullPath);
     if (!fileStats.isFile()) throw { code: 'ENOENT' };
 
     const ext = extname(fullPath);
@@ -44,6 +44,7 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, {
       'Content-Type': contentType,
       'Content-Length': fileStats.size,
+      'Cache-Control': 'public, max-age=3600', // Basic caching
     });
     res.end(content);
   } catch (error) {
