@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const ASSET_BASE = '/assets/';
 
+  // Safe element lookup
   const elements = {
     input: document.getElementById('cmd'),
     visual: document.getElementById('visual'),
@@ -18,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     musicIcon: document.getElementById('music-icon'),
   };
 
-  // Preload critical sounds to avoid delays / policy blocks
+  // Preload sounds to bypass first-play blocks and reduce latency
   const clickSound = new Audio(`${ASSET_BASE}audio/click.mp3`);
   clickSound.preload = 'auto';
   const ambient = new Audio(`${ASSET_BASE}audio/drone.mp3`);
@@ -90,21 +91,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function playClick() {
     clickSound.currentTime = 0;
-    clickSound.play().catch(e => console.warn('Click sound blocked:', e));
+    clickSound.play().catch(e => console.warn('Click sound blocked by policy:', e));
   }
 
   function updateMusicUI() {
     elements.musicToggle?.classList.toggle('music-on', isMusicOn);
     elements.musicIndicator?.classList.toggle('music-on', isMusicOn);
-    if (elements.musicIcon) {
-      elements.musicIcon.src = `${ASSET_BASE}images/${isMusicOn ? 'note-on.png' : 'note-off.png'}`;
-    }
+    elements.musicIcon && (elements.musicIcon.src = `${ASSET_BASE}images/${isMusicOn ? 'note-on.png' : 'note-off.png'}`);
   }
 
   function ensureAmbientPlaying() {
-    if (ambient.paused) {
-      ambient.play().catch(e => console.warn('Ambient autoplay blocked:', e));
-    }
+    ambient.play().catch(e => console.warn('Ambient play blocked:', e));
   }
 
   function switchVideo(videoFile, loop = false) {
@@ -118,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     elements.visual.load();
     elements.visual.onloadedmetadata = () => {
       elements.visual.currentTime = 0;
-      elements.visual.play().catch(e => console.warn('Video play failed:', e));
+      elements.visual.play().catch(e => console.warn('Video autoplay failed:', e));
       elements.visual.style.opacity = 1;
     };
   }
@@ -132,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function loadEndVideo() {
     switchVideo('special/end.mp4', false);
+    if (!elements.visual) return;
     elements.visual.onloadedmetadata = () => {
       const duration = elements.visual.duration || 0;
       if (duration > 4) {
@@ -151,9 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function resetTranscriptPlaceholder() {
-    if (elements.transcript) {
-      elements.transcript.innerHTML = '<span class="transcript-placeholder">Your speech text will appear here.</span>';
-    }
+    elements.transcript && (elements.transcript.innerHTML = '<span class="transcript-placeholder">Your speech text will appear here.</span>');
   }
 
   function setTranscript(rawText) {
@@ -262,7 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cheerFile = midCheerFiles[Math.floor(Math.random() * midCheerFiles.length)];
     cheerAudio = new Audio(`${ASSET_BASE}${cheerFile}`);
     cheerAudio.volume = isMuted ? 0 : 0.7;
-    cheerAudio.play().catch(() => {});
+    cheerAudio.play().catch(e => console.warn('Cheer play blocked:', e));
     setTimeout(() => cheerAudio?.pause(), 6000);
     const pauseVideo = getRandomVideo('closed');
     if (pauseVideo) switchVideo(`mouth-shapes/${pauseVideo}`, false);
@@ -275,10 +271,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function endSequence() {
     loadEndVideo();
     isIdle = true;
-    if (elements.input) {
-      elements.input.disabled = false;
-      elements.input.value = '';
-    }
+    elements.input && (elements.input.disabled = false);
+    elements.input && (elements.input.value = '');
     resetTranscriptPlaceholder();
   }
 
@@ -287,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentSpeechAudio = speechAudios[currentIndex];
     currentSpeechAudio.volume = isMuted ? 0 : 1;
     setupLipSync(currentSpeechAudio);
-    currentSpeechAudio.play().catch(e => console.warn('Speech playback failed:', e));
+    currentSpeechAudio.play().catch(e => console.warn('Speech play failed:', e));
     currentSpeechAudio.onended = () => {
       currentIndex++;
       currentIndex < speechAudios.length ? playMidCheer(playNext) : endSequence();
@@ -298,18 +292,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const prompt = elements.input?.value?.trim();
     if (!prompt || !isIdle) return;
     isIdle = false;
-    if (elements.input) elements.input.disabled = true;
+    elements.input && (elements.input.disabled = true);
     playClick();
     elements.loadBar?.classList.add('active');
     elements.loadText?.classList.add('active');
-    if (elements.transcript) {
-      elements.transcript.innerHTML = '<span class="transcript-placeholder">Generating speech…</span>';
-    }
+    elements.transcript && (elements.transcript.innerHTML = '<span class="transcript-placeholder">Generating speech…</span>');
 
     let progress = 0;
     const progressInterval = setInterval(() => {
       progress = Math.min(100, progress + 7);
-      if (elements.loadProgress) elements.loadProgress.style.width = `${progress}%`;
+      elements.loadProgress && (elements.loadProgress.style.width = `${progress}%`);
     }, 260);
 
     try {
@@ -318,7 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt }),
       });
-      if (!res.ok) throw new Error(`API error: ${res.status} - ${await res.text()}`);
+      if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`);
       const { audios, transcript } = await res.json();
       if (!audios?.length) throw new Error('No audio returned');
 
@@ -328,16 +320,16 @@ document.addEventListener('DOMContentLoaded', () => {
       ambient.volume = isMusicOn ? 0.1 : 0;
       playNext();
     } catch (error) {
-      console.error('Generate speech failed:', error);
+      console.error('Generate failed:', error);
       setTranscript('Error: Could not generate speech.');
       loadIdleVideo();
     } finally {
       elements.loadBar?.classList.remove('active');
       elements.loadText?.classList.remove('active');
       clearInterval(progressInterval);
-      if (elements.loadProgress) elements.loadProgress.style.width = '0%';
+      elements.loadProgress && (elements.loadProgress.style.width = '0%');
       isIdle = true;
-      if (elements.input) elements.input.disabled = false;
+      elements.input && (elements.input.disabled = false);
     }
   }
 
@@ -347,7 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadIdleVideo();
   resetTranscriptPlaceholder();
 
-  // Event listeners
+  // Event listeners with safe chaining
   elements.pauseBtn?.addEventListener('click', () => {
     playClick();
     if (isCheering && cheerAudio) {
@@ -360,8 +352,8 @@ document.addEventListener('DOMContentLoaded', () => {
   elements.muteBtn?.addEventListener('click', () => {
     playClick();
     isMuted = !isMuted;
-    if (currentSpeechAudio) currentSpeechAudio.volume = isMuted ? 0 : 1;
-    if (cheerAudio) cheerAudio.volume = isMuted ? 0 : 0.7;
+    currentSpeechAudio && (currentSpeechAudio.volume = isMuted ? 0 : 1);
+    cheerAudio && (cheerAudio.volume = isMuted ? 0 : 0.7);
   });
 
   elements.musicToggle?.addEventListener('click', () => {
@@ -374,35 +366,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   elements.lightningBtn?.addEventListener('click', () => {
     playClick();
-    if (elements.visual) {
-      elements.visual.classList.add('flash-transition');
-      setTimeout(() => elements.visual.classList.remove('flash-transition'), 400);
-    }
+    elements.visual?.classList.add('flash-transition');
+    setTimeout(() => elements.visual?.classList.remove('flash-transition'), 400);
   });
 
   elements.diceBtn?.addEventListener('click', () => {
     playClick();
     const topic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
-    if (elements.input) {
-      elements.input.value = `Give a presidential speech about ${topic}.`;
-      generateSpeech();
-    }
+    elements.input && (elements.input.value = `Give a presidential speech about ${topic}.`);
+    generateSpeech();
   });
 
   elements.stopBtn?.addEventListener('click', () => {
     playClick();
     currentSpeechAudio?.pause();
-    if (currentSpeechAudio) currentSpeechAudio.currentTime = 0;
+    currentSpeechAudio && (currentSpeechAudio.currentTime = 0);
     cheerAudio?.pause();
-    if (cheerAudio) cheerAudio.currentTime = 0;
+    cheerAudio && (cheerAudio.currentTime = 0);
     cancelAnimationFrame(animationFrameId);
     loadIdleVideo();
     ambient.volume = isMusicOn ? 0.3 : 0;
     isCheering = false;
     isIdle = true;
-    if (elements.input) {
-      elements.input.disabled = false;
-    }
+    elements.input && (elements.input.disabled = false);
     currentIndex = speechAudios.length;
     resetTranscriptPlaceholder();
   });
