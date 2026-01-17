@@ -25,7 +25,7 @@ export default async function handler(req, res) {
 
     if (!groqRes.ok) {
       const errText = await groqRes.text();
-      console.error('Groq response:', errText);
+      console.error('Groq error:', errText);
       throw new Error(`Groq failed (${groqRes.status}): ${errText}`);
     }
 
@@ -33,74 +33,96 @@ export default async function handler(req, res) {
     let text = groqJson?.choices?.[0]?.message?.content?.trim();
     if (!text) throw new Error('No speech text from LLM');
 
-    // Combined cleanup in one pass
+    // Single-pass cleanup
     text = text
       .replace(/\r\n/g, '\n')
-      .replace(/\b(?=[A-Za-z]*\d)(?=\d*[A-Za-z])[A-Za-z0-9]{6,}\b/g, '') // Remove gibberish
+      .replace(/\b(?=[A-Za-z]*\d)(?=\d*[A-Za-z])[A-Za-z0-9]{6,}\b/g, '')
       .replace(/[ \t]{2,}/g, ' ')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
 
-    // Ensure exactly one [cheering]
+    // Enforce one [cheering]
     const cheeringMatches = text.match(/\[cheering\]/gi) || [];
     if (cheeringMatches.length === 0) {
       const sentences = text.split(/(?<=[.!?])\s+/).filter(Boolean);
       if (sentences.length > 2) {
-        const midIndex = Math.floor(sentences.length / 2);
-        sentences.splice(midIndex, 0, '[cheering]');
+        sentences.splice(Math.floor(sentences.length / 2), 0, '[cheering]');
         text = sentences.join(' ');
       } else {
         text += ' [cheering]';
       }
     } else if (cheeringMatches.length > 1) {
       let first = true;
-      text = text.replace(/\[cheering\]/gi, () => (first ? (first = false, '[cheering]') : ''));
+      text = text.replace(/\[cheering\]/gi, () => first ? (first = false, '[cheering]') : '');
     }
 
-    // Split into parts around [cheering]
     const parts = text.split(/\[cheering\]/i).map(p => p.trim()).filter(Boolean);
-    if (!parts.length) throw new Error('Empty speech after processing');
+    if (!parts.length) throw new Error('Speech text empty after processing');
 
     const audios = [];
     for (const part of parts) {
-      // Validate text length for ElevenLabs (400 error fix)
       if (part.length < 1 || part.length > 5000) {
-        console.warn('Part too short/long:', part.length);
-        continue; // Skip invalid parts
+        console.warn('Skipping invalid part length:', part.length);
+        continue;
       }
 
-      const elevenBody = JSON.stringify({
+      const body = JSON.stringify({
         text: part,
-        model_id: 'eleven_multilingual_v3',
+        model_id: 'eleven_v3',  // Correct v3 model ID as confirmed
         voice_settings: { stability: 0.3, similarity_boost: 0.85, style: 0.6, use_speaker_boost: true },
         output_format: 'mp3_44100_128',
       });
 
-      const elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+      let elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
         method: 'POST',
-        headers: { 
-          'xi-api-key': ELEVENLABS_API_KEY, 
+        headers: {
+          'xi-api-key': ELEVENLABS_API_KEY,
           'Content-Type': 'application/json',
-          'Accept': 'audio/mpeg'
+          'Accept': 'audio/mpeg',
         },
-        body: elevenBody,
+        body,
       });
+
+      // Retry with fallback settings on 400 (common for tag or config issues)
+      if (elevenRes.status === 400) {
+        console.warn('ElevenLabs 400 - retrying with fallback settings');
+        const fallbackBody = JSON.stringify({
+          text: part,
+          model_id: 'eleven_v3',
+          voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.4, use_speaker_boost: false },
+          output_format: 'mp3_44100_128',
+        });
+        elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+          method: 'POST',
+          headers: {
+            'xi-api-key': ELEVENLABS_API_KEY,
+            'Content-Type': 'application/json',
+            'Accept': 'audio/mpeg',
+          },
+          body: fallbackBody,
+        });
+      }
 
       if (!elevenRes.ok) {
         const errText = await elevenRes.text();
-        console.error('ElevenLabs response:', { status: elevenRes.status, error: errText });
+        console.error('ElevenLabs error:', {
+          status: elevenRes.status,
+          response: errText,
+          sentTextLength: part.length,
+          sentBody: body.slice(0, 500) + '...',
+        });
         throw new Error(`ElevenLabs failed (${elevenRes.status}): ${errText}`);
       }
 
-      const audioBuffer = await elevenRes.arrayBuffer();
-      audios.push(Buffer.from(audioBuffer).toString('base64'));
+      const buffer = await elevenRes.arrayBuffer();
+      audios.push(Buffer.from(buffer).toString('base64'));
     }
 
-    if (audios.length === 0) throw new Error('No valid audio parts generated');
+    if (audios.length === 0) throw new Error('No valid audio generated');
 
     res.status(200).json({ audios, transcript: text });
   } catch (error) {
-    console.error('Full API error:', error.message);
+    console.error('Speech generation error:', error.message);
     res.status(500).json({ error: error.message || 'Speech generation failed' });
   }
 }
