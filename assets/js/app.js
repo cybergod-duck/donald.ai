@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const ASSET_BASE = '/assets/';
 
-  // Safe element lookup with logging
+  // Safe element lookup
   const getEl = id => document.getElementById(id) || console.warn(`Missing element: #${id}`);
 
   const elements = {
@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
     musicIcon: getEl('music-icon'),
   };
 
-  // Preload critical media
+  // Preload sounds
   const clickSound = new Audio(`${ASSET_BASE}audio/click.mp3`);
   clickSound.preload = 'auto';
   const ambient = new Audio(`${ASSET_BASE}audio/drone.mp3`);
@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentIndex = 0;
   let hasUserInteracted = false;
 
-  // Unlock media on first gesture (required for unmuted playback)
   const unlockMedia = () => {
     if (!hasUserInteracted) {
       hasUserInteracted = true;
@@ -61,12 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', unlockMedia, { once: true });
 
   const mouthShapes = {
-    closed: ['mouth-shapes/pause1.mp4', 'mouth-shapes/pause2.mp4', 'mouth-shapes/pause3.mp4', 'mouth-shapes/pause4.mp4', 'mouth-shapes/pause5.mp4'],
-    narrow: ['mouth-shapes/1.mp4', 'mouth-shapes/2.mp4', 'mouth-shapes/3.mp4', 'mouth-shapes/4.mp4'],
-    neutral: ['mouth-shapes/5.mp4', 'mouth-shapes/6.mp4', 'mouth-shapes/7.mp4', 'mouth-shapes/8.mp4'],
-    open: ['mouth-shapes/9.mp4', 'mouth-shapes/10.mp4', 'mouth-shapes/11.mp4', 'mouth-shapes/12.mp4', 'mouth-shapes/13.mp4', 'mouth-shapes/14.mp4'],
-    wide_open: ['mouth-shapes/wide1.mp4', 'mouth-shapes/wide2.mp4', 'mouth-shapes/wide3.mp4', 'mouth-shapes/wide4.mp4', 'mouth-shapes/wide5.mp4'],
-    express: ['mouth-shapes/express1.mp4', 'mouth-shapes/express2.mp4', 'mouth-shapes/express3.mp4', 'mouth-shapes/express4.mp4', 'mouth-shapes/express5.mp4', 'mouth-shapes/express6.mp4'],
+    closed: ['pause1.mp4', 'pause2.mp4', 'pause3.mp4', 'pause4.mp4', 'pause5.mp4'],
+    narrow: ['1.mp4', '2.mp4', '3.mp4', '4.mp4'],
+    neutral: ['5.mp4', '6.mp4', '7.mp4', '8.mp4'],
+    open: ['9.mp4', '10.mp4', '11.mp4', '12.mp4', '13.mp4', '14.mp4'],
+    wide_open: ['wide1.mp4', 'wide2.mp4', 'wide3.mp4', 'wide4.mp4', 'wide5.mp4'],
+    express: ['express1.mp4', 'express2.mp4', 'express3.mp4', 'express4.mp4', 'express5.mp4', 'express6.mp4'],
   };
 
   const midCheerFiles = ['audio/cheers/cheer1.mp3', 'audio/cheers/cheer3.mp3', 'audio/cheers/cheer4.mp3', 'audio/cheers/cheer5.mp3'];
@@ -123,8 +122,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function switchVideo(videoFile, loop = false) {
-    if (!videoFile || !elements.visual) return console.warn('No visual for video switch');
-    const fullPath = `${ASSET_BASE}videos/${videoFile}`;
+    if (!videoFile || !elements.visual) return console.warn('No visual element');
+    // Remove double mouth-shapes prefix if present
+    let cleanFile = videoFile.replace(/^mouth-shapes\//, '');
+    const fullPath = `${ASSET_BASE}videos/${cleanFile}`;
     if (elements.visual.src === fullPath) return;
     console.log('Switching video to:', fullPath);
     elements.visual.style.opacity = 1;
@@ -137,7 +138,13 @@ document.addEventListener('DOMContentLoaded', () => {
       elements.visual.play().catch(e => console.warn('Video play blocked:', e.message));
       elements.visual.style.opacity = 1;
     };
-    elements.visual.onerror = e => console.error('Video load error:', e);
+    elements.visual.onerror = e => {
+      console.error('Video load failed:', fullPath, e);
+      // Fallback to closed shape or idle if error
+      if (cleanFile.includes('mouth-shapes')) {
+        switchVideo('special/idle.mp4', true);
+      }
+    };
   }
 
   function loadIdleVideo() {
@@ -245,9 +252,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (now - lastSwitchTime >= minSwitchInterval && mouthShape !== currentMouthShape) {
       const candidate = getRandomVideo(mouthShape);
       if (candidate) {
-        switchVideo(`mouth-shapes/${candidate}`, false);
+        switchVideo(candidate, false);
         currentMouthShape = mouthShape;
         lastSwitchTime = now;
+      } else {
+        console.warn('No candidate video for shape:', mouthShape);
+        switchVideo('special/idle.mp4', true); // Fallback to idle
       }
     }
     animationFrameId = requestAnimationFrame(() => syncLipSync(analyser, frequencyData, timeData));
@@ -281,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cheerAudio.play().catch(e => console.warn('Cheer blocked:', e.message));
     setTimeout(() => cheerAudio?.pause(), 6000);
     const pauseVideo = getRandomVideo('closed');
-    if (pauseVideo) switchVideo(`mouth-shapes/${pauseVideo}`, false);
+    if (pauseVideo) switchVideo(pauseVideo, false);
     setTimeout(() => {
       isCheering = false;
       callback();
@@ -433,12 +443,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Realistic loading bar animation (non-linear, more natural feel)
+  // Realistic loading bar
   const fakeLoadPulse = () => {
     if (elements.loadBar?.classList.contains('active')) {
       let p = 0;
       const int = setInterval(() => {
-        p += Math.random() * 10 + 4; // Random increment for realism
+        p += Math.random() * 10 + 4;
         if (p > 98) p = 98;
         elements.loadProgress.style.width = `${p}%`;
         if (p >= 98) clearInterval(int);
@@ -446,7 +456,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Hook into load bar activation
   const origAdd = elements.loadBar?.classList.add;
   if (origAdd) {
     elements.loadBar.classList.add = function(...args) {
