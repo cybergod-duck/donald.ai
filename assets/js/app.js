@@ -1,4 +1,4 @@
-const GITHUB_BASE = '/assets/';
+const ASSET_BASE = '/assets/';
 
 const elements = {
   input: document.getElementById('cmd'),
@@ -11,14 +11,14 @@ const elements = {
   lightningBtn: document.getElementById('lightning-btn'),
   diceBtn: document.getElementById('dice-btn'),
   stopBtn: document.getElementById('stop-btn'),
-  transcriptEl: document.getElementById('transcript'),
+  transcript: document.getElementById('transcript'),
   musicToggle: document.getElementById('music-toggle'),
   musicIndicator: document.querySelector('.music-indicator'),
   musicIcon: document.getElementById('music-icon'),
 };
 
-const clickSound = new Audio(GITHUB_BASE + 'audio/click.mp3');
-const ambient = new Audio(GITHUB_BASE + 'audio/drone.mp3');
+const clickSound = new Audio(ASSET_BASE + 'audio/click.mp3');
+const ambient = new Audio(ASSET_BASE + 'audio/drone.mp3');
 ambient.loop = true;
 ambient.volume = 0.3;
 
@@ -85,34 +85,26 @@ const randomTopics = [
 ];
 
 function playClick() {
-  try {
-    clickSound.currentTime = 0;
-    clickSound.play().catch(() => {});
-  } catch (_) {}
+  clickSound.currentTime = 0;
+  clickSound.play().catch(() => {});
 }
 
 function updateMusicUI() {
   elements.musicToggle.classList.toggle('music-on', isMusicOn);
   elements.musicIndicator.classList.toggle('music-on', isMusicOn);
-  elements.musicIcon.src = GITHUB_BASE + 'images/' + (isMusicOn ? 'note-on.png' : 'note-off.png');
+  elements.musicIcon.src = `${ASSET_BASE}images/${isMusicOn ? 'note-on.png' : 'note-off.png'}`;
 }
 
-async function ensureAmbientPlaying() {
-  try {
-    await ambient.play();
-  } catch (_) {}
+function ensureAmbientPlaying() {
+  ambient.play().catch(() => {});
 }
 
 function switchVideo(videoFile, loop = false) {
-  if (!videoFile) return;
-  const targetSrc = GITHUB_BASE + videoFile;
-  if (elements.visual.src === targetSrc) {
-    return;
-  }
+  if (!videoFile || elements.visual.src === ASSET_BASE + videoFile) return;
   elements.visual.style.opacity = 1;
   elements.visual.loop = loop;
   elements.visual.muted = true;
-  elements.visual.src = targetSrc;
+  elements.visual.src = ASSET_BASE + videoFile;
   elements.visual.load();
   elements.visual.onloadedmetadata = () => {
     elements.visual.currentTime = 0;
@@ -134,7 +126,7 @@ function loadEndVideo() {
     const duration = elements.visual.duration || 0;
     if (duration > 4) {
       setTimeout(() => {
-        cheerAudio = new Audio(GITHUB_BASE + 'audio/cheers/cheer2.mp3');
+        cheerAudio = new Audio(`${ASSET_BASE}audio/cheers/cheer2.mp3`);
         cheerAudio.volume = isMuted ? 0 : 0.7;
         cheerAudio.play().catch(() => {});
       }, Math.max(0, (duration - 4) * 1000));
@@ -149,27 +141,19 @@ function loadEndVideo() {
 }
 
 function resetTranscriptPlaceholder() {
-  elements.transcriptEl.innerHTML = '';
-  const span = document.createElement('span');
-  span.className = 'transcript-placeholder';
-  span.textContent = 'Your speech text will appear here.';
-  elements.transcriptEl.appendChild(span);
+  elements.transcript.innerHTML = '<span class="transcript-placeholder">Your speech text will appear here.</span>';
 }
 
 function setTranscript(rawText) {
-  elements.transcriptEl.innerHTML = '';
-  if (!rawText || !rawText.trim()) {
+  elements.transcript.innerHTML = '';
+  if (!rawText?.trim()) {
     resetTranscriptPlaceholder();
     return;
   }
 
-  let cleaned = String(rawText)
+  let cleaned = rawText
     .replace(/\r\n/g, '\n')
-    .replace(/\[applause]/gi, '')
-    .replace(/\[cheering]/gi, '')
-    .replace(/\[pause]/gi, '')
-    .replace(/\[pauses?]/gi, '')
-    .replace(/\[(excited|angry|shouts?|laughs?|sighs?|whispers?|calm)\]/gi, '')
+    .replace(/\[(applause|cheering|pause|pauses?|(excited|angry|shouts?|laughs?|sighs?|whispers?|calm))\]/gi, '')
     .replace(/\[[^\]]+]/g, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -179,7 +163,7 @@ function setTranscript(rawText) {
     return;
   }
 
-  cleaned = cleaned.replace(/\s+\n/g, '\n').replace(/\n\s+/g, '\n');
+  cleaned = cleaned.replace(/\s+\n|\n\s+/g, '\n');
   const textFlat = cleaned.replace(/\n+/g, ' ');
   const sentences = textFlat
     .split(/(?<=[.!?])\s+(?=[A-Z])/)
@@ -187,78 +171,47 @@ function setTranscript(rawText) {
     .filter(Boolean);
 
   if (!sentences.length) {
-    const p = document.createElement('p');
-    p.textContent = cleaned;
-    elements.transcriptEl.appendChild(p);
+    elements.transcript.innerHTML = `<p>${cleaned}</p>`;
     return;
   }
 
-  const paragraphSentences = [];
-  const maxSentencesPerParagraph = 3;
-  let currentGroup = [];
-
-  sentences.forEach((s) => {
-    currentGroup.push(s);
-    if (currentGroup.length >= maxSentencesPerParagraph) {
-      paragraphSentences.push(currentGroup.join(' '));
-      currentGroup = [];
-    }
-  });
-
-  if (currentGroup.length) {
-    paragraphSentences.push(currentGroup.join(' '));
+  const paragraphs = [];
+  const maxPerPara = 3;
+  for (let i = 0; i < sentences.length; i += maxPerPara) {
+    paragraphs.push(sentences.slice(i, i + maxPerPara).join(' '));
   }
 
-  paragraphSentences.forEach((para) => {
-    const p = document.createElement('p');
-    p.textContent = para;
-    elements.transcriptEl.appendChild(p);
-  });
+  elements.transcript.innerHTML = paragraphs.map(para => `<p>${para}</p>`).join('');
 }
 
 function getRandomVideo(shape) {
   const videos = mouthShapes[shape];
-  if (!videos || !videos.length) return null;
+  if (!videos?.length) return null;
   let pool = videos.slice();
   const lastUsed = lastVideoByShape[shape];
-  if (lastUsed && pool.length > 1) {
-    pool = pool.filter(v => v !== lastUsed);
-  }
+  if (lastUsed && pool.length > 1) pool = pool.filter(v => v !== lastUsed);
   const candidate = pool[Math.floor(Math.random() * pool.length)];
   lastVideoByShape[shape] = candidate;
   videoHistory.push(candidate);
-  if (videoHistory.length > 20) {
-    videoHistory.shift();
-  }
+  if (videoHistory.length > 20) videoHistory.shift();
   return candidate;
 }
 
 function getSmartMouthShape(freqData, timeData) {
-  const volumeSum = timeData.reduce((sum, val) => sum + Math.abs(val - 128), 0);
-  const volume = volumeSum / timeData.length;
+  const volume = timeData.reduce((sum, val) => sum + Math.abs(val - 128), 0) / timeData.length;
   const lowFreq = freqData.slice(0, 8).reduce((a, b) => a + b, 0) / 8;
   const midFreq = freqData.slice(8, 32).reduce((a, b) => a + b, 0) / 24;
   const highFreq = freqData.slice(32, 64).reduce((a, b) => a + b, 0) / 32;
 
-  if (volume < 3) {
-    return 'closed';
-  }
-  if (volume < 8) {
-    return highFreq > 45 ? 'narrow' : 'neutral';
-  }
-  if (volume < 14) {
-    return midFreq > 55 ? 'open' : 'neutral';
-  }
-  if (volume < 20) {
-    return midFreq > 65 ? 'open' : (Math.random() < 0.4 ? 'express' : 'wide_open');
-  }
+  if (volume < 3) return 'closed';
+  if (volume < 8) return highFreq > 45 ? 'narrow' : 'neutral';
+  if (volume < 14) return midFreq > 55 ? 'open' : 'neutral';
+  if (volume < 20) return midFreq > 65 ? 'open' : (Math.random() < 0.4 ? 'express' : 'wide_open');
   return Math.random() < 0.6 ? 'wide_open' : 'express';
 }
 
 function syncLipSync(analyser, frequencyData, timeData) {
-  if (!currentSpeechAudio || currentSpeechAudio.paused || isCheering) {
-    return;
-  }
+  if (!currentSpeechAudio || currentSpeechAudio.paused || isCheering) return;
   analyser.getByteFrequencyData(frequencyData);
   analyser.getByteTimeDomainData(timeData);
   const now = Date.now();
@@ -267,15 +220,13 @@ function syncLipSync(analyser, frequencyData, timeData) {
 
   if (volumeAvg < 1.5) {
     lastLowVolumeTime ||= now;
-    if (now - lastLowVolumeTime > 700) {
-      mouthShape = 'closed';
-    }
+    if (now - lastLowVolumeTime > 700) mouthShape = 'closed';
   } else {
     lastLowVolumeTime = 0;
   }
 
   const minSwitchInterval = 110;
-  if (now - lastSwitchTime >= minSwitchInterval || mouthShape !== currentMouthShape) {
+  if (now - lastSwitchTime >= minSwitchInterval && mouthShape !== currentMouthShape) {
     const candidate = getRandomVideo(mouthShape);
     if (candidate) {
       switchVideo(candidate, false);
@@ -284,9 +235,7 @@ function syncLipSync(analyser, frequencyData, timeData) {
     }
   }
 
-  animationFrameId = requestAnimationFrame(
-    () => syncLipSync(analyser, frequencyData, timeData)
-  );
+  animationFrameId = requestAnimationFrame(() => syncLipSync(analyser, frequencyData, timeData));
 }
 
 function setupLipSync(audio) {
@@ -303,18 +252,10 @@ function setupLipSync(audio) {
 
   audio.onplay = () => {
     cancelAnimationFrame(animationFrameId);
-    animationFrameId = requestAnimationFrame(
-      () => syncLipSync(analyser, frequencyData, timeData)
-    );
+    animationFrameId = requestAnimationFrame(() => syncLipSync(analyser, frequencyData, timeData));
   };
 
-  audio.onpause = () => {
-    cancelAnimationFrame(animationFrameId);
-  };
-
-  audio.onended = () => {
-    cancelAnimationFrame(animationFrameId);
-  };
+  audio.onpause = audio.onended = () => cancelAnimationFrame(animationFrameId);
 
   return analyser;
 }
@@ -323,20 +264,13 @@ function playMidCheer(callback) {
   cancelAnimationFrame(animationFrameId);
   isCheering = true;
   const cheerFile = midCheerFiles[Math.floor(Math.random() * midCheerFiles.length)];
-  cheerAudio = new Audio(GITHUB_BASE + cheerFile);
+  cheerAudio = new Audio(ASSET_BASE + cheerFile);
   cheerAudio.volume = isMuted ? 0 : 0.7;
   cheerAudio.play().catch(() => {});
-
-  setTimeout(() => {
-    try {
-      cheerAudio.pause();
-    } catch (_) {}
-  }, 6000);
+  setTimeout(() => cheerAudio.pause(), 6000);
 
   const pauseVideo = getRandomVideo('closed');
-  if (pauseVideo) {
-    switchVideo(pauseVideo, false);
-  }
+  if (pauseVideo) switchVideo(pauseVideo, false);
 
   setTimeout(() => {
     isCheering = false;
@@ -357,37 +291,30 @@ function playNext() {
     endSequence();
     return;
   }
-
   currentSpeechAudio = speechAudios[currentIndex];
   currentSpeechAudio.volume = isMuted ? 0 : 1;
   setupLipSync(currentSpeechAudio);
   currentSpeechAudio.play().catch(() => {});
-
   currentSpeechAudio.onended = () => {
-    currentIndex += 1;
-    if (currentIndex < speechAudios.length) {
-      playMidCheer(() => playNext());
-    } else {
-      endSequence();
-    }
+    currentIndex++;
+    currentIndex < speechAudios.length ? playMidCheer(playNext) : endSequence();
   };
 }
 
 async function generateSpeech() {
   const prompt = elements.input.value.trim();
   if (!prompt || !isIdle) return;
-
   isIdle = false;
   elements.input.disabled = true;
   playClick();
   elements.loadBar.classList.add('active');
   elements.loadText.classList.add('active');
-  elements.transcriptEl.innerHTML = '<span class="transcript-placeholder">Generating speech…</span>';
+  elements.transcript.innerHTML = '<span class="transcript-placeholder">Generating speech…</span>';
 
   let progress = 0;
   const progressInterval = setInterval(() => {
     progress = Math.min(100, progress + 7);
-    elements.loadProgress.style.width = progress + '%';
+    elements.loadProgress.style.width = `${progress}%`;
   }, 260);
 
   try {
@@ -396,17 +323,9 @@ async function generateSpeech() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt }),
     });
-
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`API failed: ${res.status} – ${text}`);
-    }
-
+    if (!res.ok) throw new Error(`API failed: ${res.status} – ${await res.text()}`);
     const { audios, transcript } = await res.json();
-
-    if (!audios || !audios.length) {
-      throw new Error('No audio generated from API');
-    }
+    if (!audios?.length) throw new Error('No audio generated from API');
 
     setTranscript(transcript || '');
     elements.loadBar.classList.remove('active');
@@ -414,7 +333,7 @@ async function generateSpeech() {
     clearInterval(progressInterval);
     elements.loadProgress.style.width = '0%';
 
-    speechAudios = audios.map((b64) => new Audio(`data:audio/mp3;base64,${b64}`));
+    speechAudios = audios.map(b64 => new Audio(`data:audio/mp3;base64,${b64}`));
     currentIndex = 0;
     ambient.volume = isMusicOn ? 0.1 : 0;
     playNext();
@@ -437,60 +356,50 @@ ensureAmbientPlaying();
 loadIdleVideo();
 resetTranscriptPlaceholder();
 
-// UI handlers
-elements.pauseBtn.onclick = () => {
+// UI handlers with consistent addEventListener
+elements.pauseBtn.addEventListener('click', () => {
   playClick();
   if (isCheering && cheerAudio) {
-    if (cheerAudio.paused) cheerAudio.play().catch(() => {});
-    else cheerAudio.pause();
+    cheerAudio.paused ? cheerAudio.play().catch(() => {}) : cheerAudio.pause();
   } else if (currentSpeechAudio) {
-    if (currentSpeechAudio.paused) currentSpeechAudio.play().catch(() => {});
-    else currentSpeechAudio.pause();
+    currentSpeechAudio.paused ? currentSpeechAudio.play().catch(() => {}) : currentSpeechAudio.pause();
   }
-};
+});
 
-elements.muteBtn.onclick = () => {
+elements.muteBtn.addEventListener('click', () => {
   playClick();
   isMuted = !isMuted;
   if (currentSpeechAudio) currentSpeechAudio.volume = isMuted ? 0 : 1;
   if (cheerAudio) cheerAudio.volume = isMuted ? 0 : 0.7;
-};
+});
 
-elements.musicToggle.onclick = () => {
+elements.musicToggle.addEventListener('click', () => {
   playClick();
   isMusicOn = !isMusicOn;
   ambient.volume = isMusicOn ? 0.3 : 0;
   updateMusicUI();
   if (isMusicOn) ensureAmbientPlaying();
-};
+});
 
-elements.lightningBtn.onclick = () => {
+elements.lightningBtn.addEventListener('click', () => {
   playClick();
   elements.visual.classList.add('flash-transition');
   setTimeout(() => elements.visual.classList.remove('flash-transition'), 400);
-};
+});
 
-elements.diceBtn.onclick = () => {
+elements.diceBtn.addEventListener('click', () => {
   playClick();
   const topic = randomTopics[Math.floor(Math.random() * randomTopics.length)];
   elements.input.value = `Give a presidential speech about ${topic}.`;
   generateSpeech();
-};
+});
 
-elements.stopBtn.onclick = () => {
+elements.stopBtn.addEventListener('click', () => {
   playClick();
-  if (currentSpeechAudio) {
-    try {
-      currentSpeechAudio.pause();
-      currentSpeechAudio.currentTime = 0;
-    } catch (_) {}
-  }
-  if (cheerAudio) {
-    try {
-      cheerAudio.pause();
-      cheerAudio.currentTime = 0;
-    } catch (_) {}
-  }
+  currentSpeechAudio?.pause();
+  currentSpeechAudio && (currentSpeechAudio.currentTime = 0);
+  cheerAudio?.pause();
+  cheerAudio && (cheerAudio.currentTime = 0);
   cancelAnimationFrame(animationFrameId);
   loadIdleVideo();
   ambient.volume = isMusicOn ? 0.3 : 0;
@@ -499,10 +408,6 @@ elements.stopBtn.onclick = () => {
   elements.input.disabled = false;
   currentIndex = speechAudios.length;
   resetTranscriptPlaceholder();
-};
-
-elements.input.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    generateSpeech();
-  }
 });
+
+elements.input.addEventListener('keydown', e => e.key === 'Enter' && generateSpeech());
