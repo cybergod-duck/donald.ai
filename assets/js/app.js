@@ -2,7 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   const ASSET_BASE = '/assets/';
-  const getEl = (id) => {
+  const getEl = id => {
     const el = document.getElementById(id);
     if (!el) console.warn(`Missing element: #${id}`);
     return el;
@@ -42,6 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const lastVideoByShape = {};
   const videoHistory = [];
   let hasUserInteracted = false;
+
+  // Unlock media on user interaction
   const unlockMedia = async () => {
     if (hasUserInteracted) return;
     hasUserInteracted = true;
@@ -51,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   document.addEventListener('click', unlockMedia, { once: true });
   document.addEventListener('keydown', unlockMedia, { once: true });
+
   const mouthShapes = {
     closed: ['pause1.mp4', 'pause2.mp4', 'pause3.mp4', 'pause4.mp4', 'pause5.mp4'],
     narrow: ['1.mp4', '2.mp4', '3.mp4', '4.mp4'],
@@ -95,25 +98,32 @@ document.addEventListener('DOMContentLoaded', () => {
     'the future of American space leadership',
     'strengthening American infrastructure coast to coast',
   ];
+
+  // Play click sound with error handling
   function playClick() {
     clickSound.currentTime = 0;
     clickSound.play().catch(e => console.warn('Click blocked:', e.message));
   }
+
+  // Update music UI state
   function updateMusicUI() {
     elements.musicToggle?.classList.toggle('music-on', isMusicOn);
     elements.musicIndicator?.classList.toggle('music-on', isMusicOn);
     if (elements.musicIcon) elements.musicIcon.src = `${ASSET_BASE}images/${isMusicOn ? 'note-on.png' : 'note-off.png'}`;
   }
+
+  // Ensure ambient audio is playing if enabled
   function ensureAmbientPlaying() {
-    ambient.play().catch(e => console.warn('Ambient blocked:', e.message));
+    if (isMusicOn) ambient.play().catch(e => console.warn('Ambient blocked:', e.message));
   }
+
+  // Switch video with normalized path and loop option
   function switchVideo(videoFile, loop = false) {
     if (!videoFile || !elements.visual) return console.warn('No visual element');
     let cleanFile = videoFile.replace(/^mouth-shapes\//, '');
     const isSpecial = cleanFile.startsWith('special/');
     const subdir = isSpecial ? '' : 'mouth-shapes/';
-    let fullPath = `${ASSET_BASE}videos/${subdir}${cleanFile}`;
-    fullPath = fullPath.replace(/\/+/g, '/');
+    let fullPath = `${ASSET_BASE}videos/${subdir}${cleanFile}`.replace(/\/+/g, '/');
     if (elements.visual.src === fullPath) return;
     console.log('Switching video to:', fullPath);
     elements.visual.style.opacity = 1;
@@ -130,12 +140,16 @@ document.addEventListener('DOMContentLoaded', () => {
       switchVideo('special/idle.mp4', true);
     };
   }
+
+  // Load idle video and reset state
   function loadIdleVideo() {
     switchVideo('special/idle.mp4', true);
     currentMouthShape = 'closed';
     videoHistory.length = 0;
     Object.keys(lastVideoByShape).forEach(key => delete lastVideoByShape[key]);
   }
+
+  // Load end video with cheer timing
   function loadEndVideo() {
     switchVideo('special/end.mp4', false);
     if (!elements.visual) return;
@@ -156,9 +170,13 @@ document.addEventListener('DOMContentLoaded', () => {
       ambient.volume = isMusicOn ? 0.3 : 0;
     };
   }
+
+  // Reset transcript to placeholder
   function resetTranscriptPlaceholder() {
     if (elements.transcript) elements.transcript.innerHTML = '<span class="transcript-placeholder">Your speech text will appear here.</span>';
   }
+
+  // Set cleaned transcript
   function setTranscript(rawText) {
     if (!elements.transcript) return;
     elements.transcript.innerHTML = '';
@@ -182,30 +200,39 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let i = 0; i < sentences.length; i += maxPerPara) {
       paragraphs.push(sentences.slice(i, i + maxPerPara).join(' '));
     }
-    elements.transcript.innerHTML = paragraphs.map(para => `<p>${para}</p>`).join('');
+    elements.transcript.innerHTML = paragraphs.map(p => `<p>${p}</p>`).join('');
   }
+
+  // Get random video for shape, avoiding repeats
   function getRandomVideo(shape) {
-    const videos = mouthShapes[shape];
-    if (!videos?.length) return null;
-    let pool = videos.filter(v => v !== lastVideoByShape[shape]);
-    if (!pool.length) pool = videos.slice();
-    const candidate = pool[Math.floor(Math.random() * pool.length)];
+    const videos = mouthShapes[shape] || [];
+    if (!videos.length) return null;
+    let candidate = videos[Math.floor(Math.random() * videos.length)];
+    const last = lastVideoByShape[shape];
+    if (last === candidate && videos.length > 1) {
+      candidate = videos.filter(v => v !== last)[Math.floor(Math.random() * (videos.length - 1))];
+    }
     lastVideoByShape[shape] = candidate;
     videoHistory.push(candidate);
     if (videoHistory.length > 20) videoHistory.shift();
     return candidate;
   }
-  function getSmartMouthShape(freqData, timeData) {
-    const volume = timeData.reduce((sum, val) => sum + Math.abs(val - 128), 0) / timeData.length;
-    const lowFreq = freqData.slice(0, 8).reduce((a, b) => a + b, 0) / 8;
-    const midFreq = freqData.slice(8, 32).reduce((a, b) => a + b, 0) / 24;
-    const highFreq = freqData.slice(32, 64).reduce((a, b) => a + b, 0) / 32;
-    if (volume < 3) return 'closed';
-    if (volume < 8) return highFreq > 45 ? 'narrow' : 'neutral';
-    if (volume < 14) return midFreq > 55 ? 'open' : 'neutral';
-    if (volume < 20) return midFreq > 65 ? 'open' : (Math.random() < 0.4 ? 'express' : 'wide_open');
-    return Math.random() < 0.6 ? 'wide_open' : 'express';
+
+  // Determine mouth shape from audio data
+  function getSmartMouthShape(frequencyData, timeData) {
+    const lowFreq = frequencyData.slice(0, 4).reduce((a, b) => a + b, 0) / 4;
+    const midFreq = frequencyData.slice(4, 8).reduce((a, b) => a + b, 0) / 4;
+    const highFreq = frequencyData.slice(8, 16).reduce((a, b) => a + b, 0) / 8;
+    const variance = timeData.reduce((acc, val) => acc + Math.abs(val - 128), 0) / timeData.length;
+    if (variance < 1.5) return 'closed';
+    if (lowFreq > 90 || variance > 25) return 'wide_open';
+    if (midFreq > 70) return 'open';
+    if (highFreq > 50) return 'narrow';
+    if (variance > 15) return 'express';
+    return 'neutral';
   }
+
+  // Sync lip movements with audio analysis
   function syncLipSync(analyser, frequencyData, timeData) {
     if (!currentSpeechAudio || currentSpeechAudio.paused || isCheering) return;
     analyser.getByteFrequencyData(frequencyData);
@@ -233,6 +260,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     animationFrameId = requestAnimationFrame(() => syncLipSync(analyser, frequencyData, timeData));
   }
+
+  // Setup audio context for lip sync
   async function setupLipSync(audio) {
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     if (!AudioContextClass) return null;
@@ -253,6 +282,8 @@ document.addEventListener('DOMContentLoaded', () => {
     audio.onpause = audio.onended = () => cancelAnimationFrame(animationFrameId);
     return analyser;
   }
+
+  // Play mid-cheer audio and pause
   function playMidCheer(callback) {
     cancelAnimationFrame(animationFrameId);
     isCheering = true;
@@ -268,6 +299,8 @@ document.addEventListener('DOMContentLoaded', () => {
       callback();
     }, 6000);
   }
+
+  // End speech sequence
   function endSequence() {
     loadEndVideo();
     isIdle = true;
@@ -277,6 +310,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     resetTranscriptPlaceholder();
   }
+
+  // Play speech from audio chunks
   async function playSpeech(audioChunks, transcript) {
     try {
       const blobs = audioChunks.map(b64 => new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], { type: 'audio/mpeg' }));
@@ -297,11 +332,15 @@ document.addEventListener('DOMContentLoaded', () => {
       loadIdleVideo();
     }
   }
+
+  // Hide loading bar
   function hideLoadingBar() {
     elements.loadBar?.classList.remove('active');
     elements.loadText?.classList.remove('active');
     if (elements.loadProgress) elements.loadProgress.style.width = '0%';
   }
+
+  // Generate speech from prompt
   async function generateSpeech() {
     const prompt = elements.input?.value?.trim();
     if (!prompt || !isIdle) return;
@@ -327,7 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(`API error ${res.status}: ${errText}`);
       }
       const data = await res.json();
-      console.log('API response:', data); // Log full response for debugging
+      console.log('API response:', data);
       const { audios, transcript } = data;
       if (!audios?.length) throw new Error('No audio chunks returned from API');
       setTranscript(transcript || 'Speech generated (no transcript returned)');
@@ -342,13 +381,15 @@ document.addEventListener('DOMContentLoaded', () => {
       clearInterval(progressInterval);
     }
   }
+
   updateMusicUI();
   ensureAmbientPlaying();
   loadIdleVideo();
   resetTranscriptPlaceholder();
+
+  // Event listeners
   elements.pauseBtn?.addEventListener('click', () => {
     playClick();
-    unlockMedia();
     if (isCheering && cheerAudio) {
       cheerAudio.paused ? cheerAudio.play().catch(() => {}) : cheerAudio.pause();
     } else if (currentSpeechAudio) {
