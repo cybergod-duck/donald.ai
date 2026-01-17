@@ -146,41 +146,26 @@ function resetTranscriptPlaceholder() {
 
 function setTranscript(rawText) {
   elements.transcript.innerHTML = '';
-  if (!rawText?.trim()) {
-    resetTranscriptPlaceholder();
-    return;
-  }
-
-  let cleaned = rawText
+  if (!rawText?.trim()) return resetTranscriptPlaceholder();
+  const cleaned = rawText
     .replace(/\r\n/g, '\n')
     .replace(/\[(applause|cheering|pause|pauses?|(excited|angry|shouts?|laughs?|sighs?|whispers?|calm))\]/gi, '')
     .replace(/\[[^\]]+]/g, '')
     .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
-  if (!cleaned) {
-    resetTranscriptPlaceholder();
-    return;
-  }
-
-  cleaned = cleaned.replace(/\s+\n|\n\s+/g, '\n');
+    .trim()
+    .replace(/\s+\n|\n\s+/g, '\n');
+  if (!cleaned) return resetTranscriptPlaceholder();
   const textFlat = cleaned.replace(/\n+/g, ' ');
-  const sentences = textFlat
-    .split(/(?<=[.!?])\s+(?=[A-Z])/)
-    .map(s => s.trim())
-    .filter(Boolean);
-
+  const sentences = textFlat.split(/(?<=[.!?])\s+(?=[A-Z])/).map(s => s.trim()).filter(Boolean);
   if (!sentences.length) {
     elements.transcript.innerHTML = `<p>${cleaned}</p>`;
     return;
   }
-
   const paragraphs = [];
   const maxPerPara = 3;
   for (let i = 0; i < sentences.length; i += maxPerPara) {
     paragraphs.push(sentences.slice(i, i + maxPerPara).join(' '));
   }
-
   elements.transcript.innerHTML = paragraphs.map(para => `<p>${para}</p>`).join('');
 }
 
@@ -202,7 +187,6 @@ function getSmartMouthShape(freqData, timeData) {
   const lowFreq = freqData.slice(0, 8).reduce((a, b) => a + b, 0) / 8;
   const midFreq = freqData.slice(8, 32).reduce((a, b) => a + b, 0) / 24;
   const highFreq = freqData.slice(32, 64).reduce((a, b) => a + b, 0) / 32;
-
   if (volume < 3) return 'closed';
   if (volume < 8) return highFreq > 45 ? 'narrow' : 'neutral';
   if (volume < 14) return midFreq > 55 ? 'open' : 'neutral';
@@ -217,14 +201,12 @@ function syncLipSync(analyser, frequencyData, timeData) {
   const now = Date.now();
   const volumeAvg = frequencyData.reduce((a, b) => a + b, 0) / frequencyData.length;
   let mouthShape = getSmartMouthShape(frequencyData, timeData);
-
   if (volumeAvg < 1.5) {
     lastLowVolumeTime ||= now;
     if (now - lastLowVolumeTime > 700) mouthShape = 'closed';
   } else {
     lastLowVolumeTime = 0;
   }
-
   const minSwitchInterval = 110;
   if (now - lastSwitchTime >= minSwitchInterval && mouthShape !== currentMouthShape) {
     const candidate = getRandomVideo(mouthShape);
@@ -234,7 +216,6 @@ function syncLipSync(analyser, frequencyData, timeData) {
       lastSwitchTime = now;
     }
   }
-
   animationFrameId = requestAnimationFrame(() => syncLipSync(analyser, frequencyData, timeData));
 }
 
@@ -249,14 +230,11 @@ function setupLipSync(audio) {
   analyser.connect(audioCtx.destination);
   const frequencyData = new Uint8Array(analyser.frequencyBinCount);
   const timeData = new Uint8Array(analyser.fftSize);
-
   audio.onplay = () => {
     cancelAnimationFrame(animationFrameId);
     animationFrameId = requestAnimationFrame(() => syncLipSync(analyser, frequencyData, timeData));
   };
-
   audio.onpause = audio.onended = () => cancelAnimationFrame(animationFrameId);
-
   return analyser;
 }
 
@@ -267,11 +245,9 @@ function playMidCheer(callback) {
   cheerAudio = new Audio(ASSET_BASE + cheerFile);
   cheerAudio.volume = isMuted ? 0 : 0.7;
   cheerAudio.play().catch(() => {});
-  setTimeout(() => cheerAudio.pause(), 6000);
-
+  setTimeout(() => cheerAudio?.pause(), 6000);
   const pauseVideo = getRandomVideo('closed');
   if (pauseVideo) switchVideo(pauseVideo, false);
-
   setTimeout(() => {
     isCheering = false;
     callback();
@@ -287,10 +263,7 @@ function endSequence() {
 }
 
 function playNext() {
-  if (currentIndex >= speechAudios.length) {
-    endSequence();
-    return;
-  }
+  if (currentIndex >= speechAudios.length) return endSequence();
   currentSpeechAudio = speechAudios[currentIndex];
   currentSpeechAudio.volume = isMuted ? 0 : 1;
   setupLipSync(currentSpeechAudio);
@@ -310,13 +283,11 @@ async function generateSpeech() {
   elements.loadBar.classList.add('active');
   elements.loadText.classList.add('active');
   elements.transcript.innerHTML = '<span class="transcript-placeholder">Generating speech…</span>';
-
   let progress = 0;
   const progressInterval = setInterval(() => {
     progress = Math.min(100, progress + 7);
     elements.loadProgress.style.width = `${progress}%`;
   }, 260);
-
   try {
     const res = await fetch('/api/generate', {
       method: 'POST',
@@ -326,13 +297,7 @@ async function generateSpeech() {
     if (!res.ok) throw new Error(`API failed: ${res.status} – ${await res.text()}`);
     const { audios, transcript } = await res.json();
     if (!audios?.length) throw new Error('No audio generated from API');
-
     setTranscript(transcript || '');
-    elements.loadBar.classList.remove('active');
-    elements.loadText.classList.remove('active');
-    clearInterval(progressInterval);
-    elements.loadProgress.style.width = '0%';
-
     speechAudios = audios.map(b64 => new Audio(`data:audio/mp3;base64,${b64}`));
     currentIndex = 0;
     ambient.volume = isMusicOn ? 0.1 : 0;
@@ -340,13 +305,14 @@ async function generateSpeech() {
   } catch (error) {
     console.error('Speech generation error:', error);
     setTranscript('Error: Could not generate speech.');
+    loadIdleVideo();
+  } finally {
     elements.loadBar.classList.remove('active');
     elements.loadText.classList.remove('active');
     clearInterval(progressInterval);
     elements.loadProgress.style.width = '0%';
     isIdle = true;
     elements.input.disabled = false;
-    loadIdleVideo();
   }
 }
 
@@ -397,9 +363,9 @@ elements.diceBtn.addEventListener('click', () => {
 elements.stopBtn.addEventListener('click', () => {
   playClick();
   currentSpeechAudio?.pause();
-  currentSpeechAudio && (currentSpeechAudio.currentTime = 0);
+  if (currentSpeechAudio) currentSpeechAudio.currentTime = 0;
   cheerAudio?.pause();
-  cheerAudio && (cheerAudio.currentTime = 0);
+  if (cheerAudio) cheerAudio.currentTime = 0;
   cancelAnimationFrame(animationFrameId);
   loadIdleVideo();
   ambient.volume = isMusicOn ? 0.3 : 0;
