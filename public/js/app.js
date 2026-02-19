@@ -1,3 +1,14 @@
+// Debug Logger
+window.onerror = function (msg, url, line, col, error) {
+    const log = document.getElementById('debug-log');
+    if (log) log.innerHTML += `<div style="color:red; border-bottom:1px solid #333; padding:2px;">${msg} (L${line})</div>`;
+    return false;
+};
+window.addEventListener('unhandledrejection', function (event) {
+    const log = document.getElementById('debug-log');
+    if (log) log.innerHTML += `<div style="color:orange; border-bottom:1px solid #333; padding:2px;">Promise Rejection: ${event.reason}</div>`;
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     const ASSET_BASE = '/assets/';
 
@@ -109,7 +120,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (hasUserInteracted) return;
         hasUserInteracted = true;
         await ambient.play().catch(() => { });
-        if (els.visual.paused) await els.visual.play().catch(() => { });
+        if (els.visual.paused) await els.visual.play().catch(e => console.error("Play warning:", e));
+        const overlay = document.querySelector('.video-overlay');
+        if (overlay) overlay.classList.add('hidden');
     }
 
     function getRandomVideo(shape) {
