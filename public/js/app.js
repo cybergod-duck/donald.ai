@@ -180,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function stopLipSync() {
         if (syncTimeout) clearTimeout(syncTimeout);
-        video.onended = null; // Stop the chain!
+        video.onended = null;
     }
 
     function switchVideo(partialPath) {
@@ -237,9 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setTimeout(() => {
             // SWITCH TO IDLE
-            video.src = ASSETS.video.idle;
-            video.loop = true;
-            video.play().catch(e => { }); // Silent catch for idle
+            // Instead of standard play, we start the Boomerang
+            startIdleBoomerang();
 
             setTimeout(() => {
                 video.classList.remove('fade-out');
@@ -284,8 +283,40 @@ document.addEventListener('DOMContentLoaded', () => {
         input.disabled = false;
         input.placeholder = "Type a topic...";
         input.focus();
-        status.innerText = "IDLE";
-        // Video handling is now done in fade sequence to ensure smoothness
+        status.innerText = "IDLE (BREATHING)";
+        // Video handling is now done via Boomerang
+        startIdleBoomerang();
+    }
+
+    // --- BOOMERANG BREATHING LOGIC ---
+    function startIdleBoomerang() {
+        if (isSpeaking) return;
+
+        const loopPoint = 1.2; // 1.2 seconds loop roughly
+        const breathSpeed = 0.55; // Slightly slow for "breathing" effect
+
+        video.src = ASSETS.video.idle;
+        video.loop = false; // We handle loop
+
+        video.play().then(() => {
+            video.playbackRate = breathSpeed;
+            boomerangLoop();
+        }).catch(e => { }); // Ignore interaction errors
+
+        function boomerangLoop() {
+            if (isSpeaking || video.src.indexOf('idle') === -1) return; // Stop if state changed
+
+            // Forward (Inhale) -> Reverse (Exhale)
+            if (video.playbackRate > 0 && video.currentTime >= loopPoint) {
+                video.playbackRate = -breathSpeed;
+            }
+            // Reverse (Exhale) -> Forward (Inhale)
+            else if (video.playbackRate < 0 && video.currentTime <= 0.1) {
+                video.playbackRate = breathSpeed;
+            }
+
+            requestAnimationFrame(boomerangLoop);
+        }
     }
 
     function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
