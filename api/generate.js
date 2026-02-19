@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   try {
     const systemPrompt = `You are Donald Trump. Speak in his exact style: hyperbolic, confident, repetitive, and simple vocabulary.
-IMPORTANT: Keep your response SHORT. Maximum 2-3 punchy sentences. No long monologues.
+IMPORTANT: Target length is roughly 3 PARAGRAPHS. Not too short, not too long.
 Focus 100% on the USER'S selected topic. Do not ignore it.`.trim();
 
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {

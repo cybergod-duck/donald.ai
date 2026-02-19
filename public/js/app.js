@@ -133,14 +133,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- LIP SYNC (SMART SHUFFLE) ---
+    // --- LIP SYNC (FULL ANIMATION PLAYBACK) ---
     function startLipSync() {
         if (syncTimeout) clearTimeout(syncTimeout);
 
         const nextShape = () => {
             if (!isSpeaking) return;
 
-            // Pick a random shape that isn't in recent history
+            // Smart Shuffle logic
             let candidate;
             let attempts = 0;
             do {
@@ -148,15 +148,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 attempts++;
             } while (videoHistory.includes(candidate) && attempts < 10);
 
-            // Update history
             videoHistory.push(candidate);
-            if (videoHistory.length > 5) videoHistory.shift(); // Remember last 5
+            if (videoHistory.length > 8) videoHistory.shift(); // Increased history buffer
 
-            switchVideo(candidate);
+            const fullPath = `/assets/media/video/${candidate}`;
+            if (video.src.includes(candidate)) {
+                // If same video, just replay it
+                video.currentTime = 0;
+                video.play();
+            } else {
+                video.src = fullPath;
+                // CRITICAL: Randomize loop vs single play to allow full "hyperspace" animations to finish
+                // Most of time, play once then switch. Occasionally loop short ones.
+                video.loop = false;
+                video.play().catch(e => { });
+            }
 
-            // Randomize timing (80ms - 250ms) to feel organic
-            const nextTime = Math.random() * 170 + 80;
-            syncTimeout = setTimeout(nextShape, nextTime);
+            // The Logic: Instead of a timer cutting it off, we wait for it to END.
+            // This ensures the user sees the "hyperspace" or "color change" effects fully.
+            // Fallback timer in case a video is weirdly long or fails to fire event.
+
+            video.onended = () => {
+                if (isSpeaking) nextShape();
+            };
+
+            // Safety timeout: If a clip hangs > 4 seconds, force switch
+            syncTimeout = setTimeout(() => {
+                if (isSpeaking) nextShape();
+            }, 4000);
         };
 
         nextShape();
