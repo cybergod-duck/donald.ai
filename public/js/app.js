@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!text) return;
 
         // USER REQUEST: Start song immediately when play is clicked
+        audioDrone.volume = 0.15; // Reset volume (it was faded to 0)
         audioDrone.play().catch(e => { });
 
         input.disabled = true;
@@ -287,7 +288,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             setTimeout(() => {
                 video.classList.remove('fade-out');
-                fadeAudio(audioDrone, 0.15, 1000);
+                // REMOVED: fadeAudio(audioDrone, 0.15, 1000); -> User wants silence until next play
+                audioDrone.pause(); // Ensure it's off
+                audioDrone.currentTime = 0; // Reset track
                 resetState();
             }, 500);
         }, 1000);
