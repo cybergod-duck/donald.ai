@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Controls
     const btnPause = document.getElementById('pause-btn');
     const btnMute = document.getElementById('mute-btn');
+    const btnMusic = document.getElementById('music-btn'); // New
     const btnFlash = document.getElementById('lightning-btn'); // Acts as "Play/Create"
     const btnStop = document.getElementById('stop-btn');
     const btnDice = document.getElementById('dice-btn');
@@ -79,15 +80,29 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 video.play();
                 if (speechAudio) speechAudio.play();
-                audioDrone.play();
+                if (!audioDrone.muted) audioDrone.play();
                 status.innerText = isSpeaking ? "SPEAKING" : "IDLE";
             }
         };
 
+        // GLOBAL MUTE (Everything)
         btnMute.onclick = () => {
+            const isMuted = !audioDrone.muted;
+            // If we are muting relative to current state...
+            // Actually, let's track global mute state separately or just check properties?
+            // Simple toggle:
             audioDrone.muted = !audioDrone.muted;
-            // REMOVED: if (speechAudio) speechAudio.muted = !speechAudio.muted; -> User wants voice always on
+            if (speechAudio) speechAudio.muted = audioDrone.muted;
+
             btnMute.style.opacity = audioDrone.muted ? "0.5" : "1";
+        };
+
+        // MUSIC ONLY TOGGLE
+        btnMusic.onclick = () => {
+            audioDrone.muted = !audioDrone.muted;
+            // Update Icon
+            const img = btnMusic.querySelector('img');
+            img.src = audioDrone.muted ? '/assets/images/note-off.png' : '/assets/images/note-on.png';
         };
 
         btnDice.onclick = () => {
@@ -104,9 +119,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const text = input.value.trim();
         if (!text) return;
 
-        // USER REQUEST: Start song immediately when play is clicked
-        audioDrone.volume = 0.15; // Reset volume (it was faded to 0)
-        audioDrone.play().catch(e => { });
+        if (!audioDrone.muted) {
+            audioDrone.volume = 0.15; // Reset volume (it was faded to 0)
+            audioDrone.play().catch(e => { });
+        }
 
         input.disabled = true;
         setInputStatus("THINKING...");
