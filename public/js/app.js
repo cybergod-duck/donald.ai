@@ -15,11 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Express / Movement
                 'mouth-shapes/express1.webm', 'mouth-shapes/express2.webm', 'mouth-shapes/express3.webm',
                 'mouth-shapes/express4.webm', 'mouth-shapes/express5.webm', 'mouth-shapes/express6.webm',
-                // Narrow / Consonants (Adding these for more variety)
-                'mouth-shapes/1.webm', 'mouth-shapes/2.webm', 'mouth-shapes/3.webm', 'mouth-shapes/4.webm',
-                // Neutral / Pauses
-                'mouth-shapes/5.webm', 'mouth-shapes/6.webm', 'mouth-shapes/7.webm', 'mouth-shapes/8.webm',
-                'mouth-shapes/pause1.webm', 'mouth-shapes/pause2.webm', 'mouth-shapes/pause3.webm', 'mouth-shapes/pause4.webm'
+                // Narrow / Consonants
+                'mouth-shapes/1.webm', 'mouth-shapes/2.webm', 'mouth-shapes/3.webm', 'mouth-shapes/4.webm'
             ]
         },
         audio: {
