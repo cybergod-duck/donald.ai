@@ -194,38 +194,59 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function playEndSequence() {
-        // STRICT SYNC: Cancel any pending timeouts and force immediate switch
+        console.log("Starting End Sequence");
+
+        // 1. STOP EVERYTHING
+        isSpeaking = false;
         if (syncTimeout) clearTimeout(syncTimeout);
         video.onended = null;
 
-        isSpeaking = false;
+        // 2. FORCE VIDEO RESET
+        video.pause();
+        video.currentTime = 0;
 
-        // Force immediate switch to end video
+        // 3. LOAD END VIDEO
+        // Force browser to acknowledge the switch
         video.src = ASSETS.video.end;
         video.loop = false;
-        video.play().catch(e => console.log("End seq play error", e));
 
+        const playPromise = video.play();
+
+        if (playPromise !== undefined) {
+            playPromise.then(_ => {
+                // Play started successfully
+                console.log("End video playing");
+            }).catch(error => {
+                console.error("End video playback failed:", error);
+                // Fallback: If video fails, just fade out
+                handleFadeSequence();
+            });
+        }
+
+        // 4. SETUP FADE AFTER END
         video.onended = () => {
-            video.onended = null;
+            console.log("End video finished");
+            handleFadeSequence();
+        };
+    }
 
-            // FADE OUT SEQUENCE
-            video.classList.add('fade-out');
-            fadeAudio(audioDrone, 0, 1000); // Fade out music
+    function handleFadeSequence() {
+        video.onended = null;
+        video.classList.add('fade-out');
+        fadeAudio(audioDrone, 0, 1000);
+
+        setTimeout(() => {
+            // SWITCH TO IDLE
+            video.src = ASSETS.video.idle;
+            video.loop = true;
+            video.play().catch(e => { }); // Silent catch for idle
 
             setTimeout(() => {
-                // AFTER FADE (1s): Switch to IDLE and FADE IN
-                video.src = ASSETS.video.idle;
-                video.loop = true;
-                video.play();
-
-                // Wait a moment for video to load/ready, then fade in
-                setTimeout(() => {
-                    video.classList.remove('fade-out');
-                    fadeAudio(audioDrone, 0.15, 1000); // Fade in music back to target volume
-                    resetState(); // Re-enable inputs
-                }, 500);
-            }, 1000);
-        };
+                video.classList.remove('fade-out');
+                fadeAudio(audioDrone, 0.15, 1000);
+                resetState();
+            }, 500);
+        }, 1000);
     }
 
     function fadeAudio(audioEl, targetVol, duration) {
