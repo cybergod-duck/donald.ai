@@ -1,0 +1,132 @@
+:root {
+    --primary: #0f0;
+    --bg: #000;
+    --surface: #111;
+}
+
+body {
+    margin: 0;
+    height: 100vh;
+    background: var(--bg);
+    color: var(--primary);
+    font-family: 'Courier New', monospace;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+#app-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 1000px;
+    padding: 20px;
+}
+
+/* VIDEO PLAYER */
+#video-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #050505;
+    border: 2px solid var(--primary);
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#trump-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* STATUS OVERLAY */
+#status-overlay {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 5px 10px;
+    border: 1px solid var(--primary);
+    font-size: 12px;
+    letter-spacing: 2px;
+}
+
+/* CONTROLS */
+#controls {
+    display: flex;
+    gap: 15px;
+    background: #0a0a0a;
+    padding: 10px 20px;
+    border-radius: 50px;
+    border: 1px solid #333;
+}
+
+.control-btn {
+    background: none;
+    border: none;
+    width: 50px;
+    /* User preferred size */
+    height: 50px;
+    cursor: pointer;
+    transition: transform 0.1s;
+    padding: 0;
+}
+
+.control-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 5px var(--primary));
+}
+
+.control-btn:hover {
+    transform: scale(1.1);
+}
+
+.control-btn:active {
+    transform: scale(0.95);
+}
+
+/* INPUT AREA */
+#input-area {
+    width: 100%;
+    max-width: 600px;
+}
+
+#cmd {
+    width: 100%;
+    background: rgba(0, 20, 0, 0.8);
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 15px;
+    font-family: inherit;
+    font-size: 18px;
+    outline: none;
+    text-align: center;
+    border-radius: 4px;
+}
+
+#cmd::placeholder {
+    color: rgba(0, 255, 0, 0.5);
+    text-transform: uppercase;
+}
+
+#cmd:focus {
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+}
+
+/* DEBUG LOG */
+#debug-log {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    font-size: 10px;
+    color: #444;
+    pointer-events: none;
+}
