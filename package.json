@@ -1,0 +1,23 @@
+{
+  "name": "donald.ai",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "tsc && sass src/styles/main.scss public/styles/main.css",
+    "start": "vercel start"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.1",
+    "@types/node": "^20.0.0",
+    "sass": "^1.69.0",
+    "vercel": "^32.0.0",
+    "eslint": "^8.57.0"
+  },
+  "engines": {
+    "node": ">=18.x"
+  }
+}
