@@ -80,7 +80,7 @@ Use these tags naturally within the flow of the speech to enhance the "Rally" at
     const audios = await Promise.all(parts.map(async (part) => {
       const body = JSON.stringify({
         text: part,
-        model_id: "eleven_turbo_v2_5", // Upgraded to v2.5 for better SFX/Emotion handling
+        model_id: "eleven_flash_v2_5",
         voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.6 }, // Added style for more expressiveness
         output_format: 'mp3_44100_128',
       });
