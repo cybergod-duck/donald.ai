@@ -137,13 +137,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadIdleVideo() {
-        switchVideo('idle.webm', true);
+        switchVideo('special/idle.webm', true);
         currentMouthShape = 'closed';
         videoHistory.length = 0;
     }
 
     function loadEndVideo() {
-        switchVideo('end.webm', false);
+        switchVideo('special/end.webm', false);
         setTimeout(() => {
             cheerAudio = new Audio(`${ASSET_BASE}media/audio/cheers/cheer2.mp3`);
             cheerAudio.volume = isMuted ? 0 : 0.7;
