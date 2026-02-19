@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURATION ---
     const ASSETS = {
         video: {
-            idle: '/assets/media/video/special/idle.webm',
+            idle: `/assets/media/video/special/idle.webm?v=${Date.now()}`, // Force reload
             end: '/assets/media/video/special/end.webm',
             // FULL LIBRARY (29 clips) for maximum variety
             shapes: [
