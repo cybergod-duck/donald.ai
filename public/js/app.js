@@ -194,11 +194,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let newShape = 'closed';
-        if (volume > 5) { // Lowered from 30 to 5 for sensitivity
-            if (highFreq > 50) newShape = 'wide_open'; // Lowered from 80
-            else if (midFreq > 40) newShape = 'open'; // Lowered from 60
-            else if (lowFreq > 30) newShape = 'neutral'; // Lowered from 50
-            else newShape = 'narrow';
+        if (volume > 5) {
+            // RANDOMIZED VARIETY: Ignore strict freq buckets to force movement
+            const roll = Math.random();
+            if (roll < 0.33) newShape = 'open';
+            else if (roll < 0.66) newShape = 'wide_open';
+            else newShape = 'express';
+
+            // Occasional neutral to break it up
+            if (Math.random() < 0.1) newShape = 'neutral';
+
             lastLowVolumeTime = 0;
         } else {
             if (!lastLowVolumeTime) lastLowVolumeTime = now;
@@ -211,6 +216,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 switchVideo(video);
                 currentMouthShape = newShape;
                 lastSwitchTime = now;
+            } else {
+                // If a shape has no videos (e.g. file missing), fallback to 'open'
+                if (newShape !== 'open') {
+                    const fallback = getRandomVideo('open');
+                    if (fallback) switchVideo(fallback);
+                }
             }
         }
 
