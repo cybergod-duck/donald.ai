@@ -187,11 +187,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const highFreq = frequencyData.slice(15, 30).reduce((a, b) => a + b, 0) / 15;
         const volume = timeData.reduce((a, b) => a + Math.abs(b - 128), 0) / timeData.length;
 
+        // Debug Log (Throttled)
+        if (now % 20 < 2) { // Roughly every 10-20 frames
+            const log = document.getElementById('debug-log');
+            if (log) log.innerHTML = `<div style="color:lime">Vol: ${volume.toFixed(1)} | Shape: ${currentMouthShape}</div>` + log.innerHTML.substring(0, 500);
+        }
+
         let newShape = 'closed';
-        if (volume > 30) {
-            if (highFreq > 80) newShape = 'wide_open';
-            else if (midFreq > 60) newShape = 'open';
-            else if (lowFreq > 50) newShape = 'neutral';
+        if (volume > 5) { // Lowered from 30 to 5 for sensitivity
+            if (highFreq > 50) newShape = 'wide_open'; // Lowered from 80
+            else if (midFreq > 40) newShape = 'open'; // Lowered from 60
+            else if (lowFreq > 30) newShape = 'neutral'; // Lowered from 50
             else newShape = 'narrow';
             lastLowVolumeTime = 0;
         } else {
