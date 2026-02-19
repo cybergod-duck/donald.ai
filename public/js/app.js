@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const clickSound = new Audio(`${ASSET_BASE}media/audio/click.mp3`);
-    const ambient = new Audio(`${ASSET_BASE}media/audio/drone.mp3`);
+    const ambient = new Audio(`${ASSET_BASE}media/audio/Drone.mp3`);
     ambient.loop = true;
     ambient.volume = 0.3;
 
