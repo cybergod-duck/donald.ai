@@ -195,7 +195,7 @@ body {
 
 .layout-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr) minmax(0, 1fr);
   gap: 6px;
   align-items: stretch;
   position: relative;
@@ -302,7 +302,7 @@ video {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center top;
+  object-position: center;
   position: absolute;
   top: 0;
   left: 0;
