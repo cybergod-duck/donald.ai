@@ -112,6 +112,21 @@ body {
     transform: scale(1.1);
 }
 
+#app-title {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--primary);
+    opacity: 0.8;
+    z-index: 100;
+    letter-spacing: 4px;
+    text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+    pointer-events: none;
+    /* Let clicks pass through */
+}
+
 /* INPUT AREA */
 #input-area {
     width: 100%;
