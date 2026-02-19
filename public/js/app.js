@@ -237,8 +237,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setTimeout(() => {
             // SWITCH TO IDLE
-            // Instead of standard play, we start the Boomerang
-            startIdleBoomerang();
+            video.src = ASSETS.video.idle;
+            video.loop = true;
+            video.play().catch(e => { });
 
             setTimeout(() => {
                 video.classList.remove('fade-out');
@@ -283,40 +284,13 @@ document.addEventListener('DOMContentLoaded', () => {
         input.disabled = false;
         input.placeholder = "Type a topic...";
         input.focus();
-        status.innerText = "IDLE (BREATHING)";
-        // Video handling is now done via Boomerang
-        startIdleBoomerang();
-    }
+        status.innerText = "IDLE";
 
-    // --- BOOMERANG BREATHING LOGIC ---
-    function startIdleBoomerang() {
-        if (isSpeaking) return;
-
-        const loopPoint = 1.2; // 1.2 seconds loop roughly
-        const breathSpeed = 0.55; // Slightly slow for "breathing" effect
-
+        // Simple Loop (User will provide the edited breathing video)
         video.src = ASSETS.video.idle;
-        video.loop = false; // We handle loop
-
-        video.play().then(() => {
-            video.playbackRate = breathSpeed;
-            boomerangLoop();
-        }).catch(e => { }); // Ignore interaction errors
-
-        function boomerangLoop() {
-            if (isSpeaking || video.src.indexOf('idle') === -1) return; // Stop if state changed
-
-            // Forward (Inhale) -> Reverse (Exhale)
-            if (video.playbackRate > 0 && video.currentTime >= loopPoint) {
-                video.playbackRate = -breathSpeed;
-            }
-            // Reverse (Exhale) -> Forward (Inhale)
-            else if (video.playbackRate < 0 && video.currentTime <= 0.1) {
-                video.playbackRate = breathSpeed;
-            }
-
-            requestAnimationFrame(boomerangLoop);
-        }
+        video.loop = true;
+        video.playbackRate = 1.0;
+        video.play().catch(e => { });
     }
 
     function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
