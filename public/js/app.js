@@ -96,10 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
             handleCommand();
         };
 
-        // Click interaction to unlock audio
-        document.body.addEventListener('click', () => {
-            audioDrone.play().catch(e => console.log("Audio unlock waiting..."));
-        }, { once: true });
+        // Click interaction removed: Audio only starts on Play/Enter
     }
 
     // --- CORE LOGIC ---
