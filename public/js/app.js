@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let hasUserInteracted = false;
 
     const mouthShapes = {
-        closed: ['pause1.webm', 'pause2.webm', 'pause3.webm', 'pause4.webm', 'pause5.webm'],
+        closed: ['pause1.webm', 'pause2.webm', 'pause3.webm', 'pause4.webm'],
         narrow: ['1.webm', '2.webm', '3.webm', '4.webm'],
         neutral: ['5.webm', '6.webm', '7.webm', '8.webm'],
         open: ['9.webm', '10.webm', '11.webm', '12.webm', '13.webm', '14.webm'],
