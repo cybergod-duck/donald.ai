@@ -32,11 +32,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingOverlay = document.getElementById('loading-overlay');
     const audioDrone = document.getElementById('ambient-audio');
 
+    // Controls
+    const btnPause = document.getElementById('pause-btn');
+    const btnMute = document.getElementById('mute-btn');
+    const btnFlash = document.getElementById('lightning-btn'); // Acts as "Play/Create"
+    const btnStop = document.getElementById('stop-btn');
+    const btnDice = document.getElementById('dice-btn');
+
     // --- STATE ---
     let isSpeaking = false;
     let speechAudio = null;
     let syncTimeout = null;
     let videoHistory = []; // Prevent immediate repeats
+    let isPaused = false;
 
     // --- INITIALIZATION ---
     function init() {
@@ -52,6 +60,42 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') handleCommand();
         });
 
+        // --- BUTTONS ---
+        btnFlash.onclick = () => handleCommand();
+
+        btnStop.onclick = () => {
+            // Stop everything
+            if (speechAudio) { speechAudio.pause(); speechAudio = null; }
+            playEndSequence();
+        };
+
+        btnPause.onclick = () => {
+            isPaused = !isPaused;
+            if (isPaused) {
+                video.pause();
+                if (speechAudio) speechAudio.pause();
+                audioDrone.pause();
+                status.innerText = "PAUSED";
+            } else {
+                video.play();
+                if (speechAudio) speechAudio.play();
+                audioDrone.play();
+                status.innerText = isSpeaking ? "SPEAKING" : "IDLE";
+            }
+        };
+
+        btnMute.onclick = () => {
+            audioDrone.muted = !audioDrone.muted;
+            if (speechAudio) speechAudio.muted = !speechAudio.muted;
+            btnMute.style.opacity = audioDrone.muted ? "0.5" : "1";
+        };
+
+        btnDice.onclick = () => {
+            const prompts = ["The Economy", "Space Force", "Fake News", "China", "Walls", "Big Macs"];
+            input.value = prompts[Math.floor(Math.random() * prompts.length)];
+            handleCommand();
+        };
+
         // Click interaction to unlock audio
         document.body.addEventListener('click', () => {
             audioDrone.play().catch(e => console.log("Audio unlock waiting..."));
@@ -62,6 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleCommand() {
         const text = input.value.trim();
         if (!text) return;
+
+        // USER REQUEST: Start song immediately when play is clicked
+        audioDrone.play().catch(e => { });
 
         input.disabled = true;
         setInputStatus("THINKING...");
