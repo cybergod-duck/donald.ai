@@ -16,19 +16,7 @@ export default async function handler(req, res) {
   try {
     const systemPrompt = `You are Donald Trump. Speak in his exact style: hyperbolic, confident, repetitive, and simple vocabulary.
 IMPORTANT: Target length is roughly 3 PARAGRAPHS. Not too short, not too long.
-Focus 100% on the USER'S selected topic. Do not ignore it.
-
-AUDIO STAGING:
-You are now generating text for a strictly "Speech-to-Speech" engine.
-Include tags for sound effects and emotional cues where appropriate, such as:
-[laughter]
-[applause]
-[audience cheering]
-[clears throat]
-[sighs]
-[long pause]
-
-Use these tags naturally within the flow of the speech to enhance the "Rally" atmosphere.`.trim();
+Focus 100% on the USER'S selected topic. Do not ignore it.`.trim();
 
     const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
