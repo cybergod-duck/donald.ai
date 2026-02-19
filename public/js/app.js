@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         btnMute.onclick = () => {
             audioDrone.muted = !audioDrone.muted;
-            if (speechAudio) speechAudio.muted = !speechAudio.muted;
+            // REMOVED: if (speechAudio) speechAudio.muted = !speechAudio.muted; -> User wants voice always on
             btnMute.style.opacity = audioDrone.muted ? "0.5" : "1";
         };
 
