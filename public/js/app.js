@@ -4,11 +4,22 @@ document.addEventListener('DOMContentLoaded', () => {
         video: {
             idle: '/assets/media/video/special/idle.webm',
             end: '/assets/media/video/special/end.webm',
-            // Shapes for random lip sync
+            // FULL LIBRARY (29 clips) for maximum variety
             shapes: [
-                'mouth-shapes/9.webm', 'mouth-shapes/10.webm', 'mouth-shapes/11.webm', // Open
-                'mouth-shapes/wide1.webm', 'mouth-shapes/wide2.webm', // Wide
-                'mouth-shapes/express1.webm', 'mouth-shapes/express2.webm' // Express
+                // Open / Vowels
+                'mouth-shapes/9.webm', 'mouth-shapes/10.webm', 'mouth-shapes/11.webm',
+                'mouth-shapes/12.webm', 'mouth-shapes/13.webm', 'mouth-shapes/14.webm',
+                // Wide / Intensity
+                'mouth-shapes/wide1.webm', 'mouth-shapes/wide2.webm', 'mouth-shapes/wide3.webm',
+                'mouth-shapes/wide4.webm', 'mouth-shapes/wide5.webm',
+                // Express / Movement
+                'mouth-shapes/express1.webm', 'mouth-shapes/express2.webm', 'mouth-shapes/express3.webm',
+                'mouth-shapes/express4.webm', 'mouth-shapes/express5.webm', 'mouth-shapes/express6.webm',
+                // Narrow / Consonants (Adding these for more variety)
+                'mouth-shapes/1.webm', 'mouth-shapes/2.webm', 'mouth-shapes/3.webm', 'mouth-shapes/4.webm',
+                // Neutral / Pauses
+                'mouth-shapes/5.webm', 'mouth-shapes/6.webm', 'mouth-shapes/7.webm', 'mouth-shapes/8.webm',
+                'mouth-shapes/pause1.webm', 'mouth-shapes/pause2.webm', 'mouth-shapes/pause3.webm', 'mouth-shapes/pause4.webm'
             ]
         },
         audio: {
@@ -26,7 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- STATE ---
     let isSpeaking = false;
     let speechAudio = null;
-    let syncInterval = null;
+    let syncTimeout = null;
+    let videoHistory = []; // Prevent immediate repeats
 
     // --- INITIALIZATION ---
     function init() {
@@ -34,7 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
         video.src = ASSETS.video.idle;
         video.loop = true;
 
-        // Try to verify asset paths in background? No, keep it simple.
+        // Volume adjustment (User requested lower)
+        audioDrone.volume = 0.15;
 
         // Inputs
         input.addEventListener('keydown', (e) => {
@@ -43,7 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Click interaction to unlock audio
         document.body.addEventListener('click', () => {
-            audioDrone.play().catch(e => console.log("Audio unlock failed yet"));
+            audioDrone.play().catch(e => console.log("Audio unlock waiting..."));
         }, { once: true });
     }
 
@@ -85,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isSpeaking = true;
 
         // Combine all audio chunks (simplification for "one speech")
-        // In a real robust app we might queue them, but let's try to blob them all 
+        // In a real robust app we might queue them, but let's try to blob them all
         // or play sequentially. Sequential is safer for browser memory.
 
         for (const chunk of audioBase64List) {
@@ -115,21 +128,37 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- LIP SYNC (RANDOMIZED) ---
-    // User requested "keep videos", so we randomly swap mouth shapes while audio plays
-    // This creates the illusion of speech without complex FFT analysis flaws
+    // --- LIP SYNC (SMART SHUFFLE) ---
     function startLipSync() {
-        if (syncInterval) clearInterval(syncInterval);
+        if (syncTimeout) clearTimeout(syncTimeout);
 
-        // Swap video every 100-200ms
-        syncInterval = setInterval(() => {
-            const randomShape = ASSETS.video.shapes[Math.floor(Math.random() * ASSETS.video.shapes.length)];
-            switchVideo(randomShape);
-        }, 150);
+        const nextShape = () => {
+            if (!isSpeaking) return;
+
+            // Pick a random shape that isn't in recent history
+            let candidate;
+            let attempts = 0;
+            do {
+                candidate = ASSETS.video.shapes[Math.floor(Math.random() * ASSETS.video.shapes.length)];
+                attempts++;
+            } while (videoHistory.includes(candidate) && attempts < 10);
+
+            // Update history
+            videoHistory.push(candidate);
+            if (videoHistory.length > 5) videoHistory.shift(); // Remember last 5
+
+            switchVideo(candidate);
+
+            // Randomize timing (80ms - 250ms) to feel organic
+            const nextTime = Math.random() * 170 + 80;
+            syncTimeout = setTimeout(nextShape, nextTime);
+        };
+
+        nextShape();
     }
 
     function stopLipSync() {
-        if (syncInterval) clearInterval(syncInterval);
+        if (syncTimeout) clearTimeout(syncTimeout);
         video.src = ASSETS.video.idle;
         video.loop = true;
         video.play();
@@ -137,10 +166,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function switchVideo(partialPath) {
         const fullPath = `/assets/media/video/${partialPath}`;
-        if (video.src.includes(fullPath)) return; // Don't reload same
+        // Note: checking src === fullPath might fail due to absolute URLs, using includes is safer
+        if (video.src.includes(partialPath)) return;
 
         video.src = fullPath;
-        video.loop = true; // Loop short clips so they don't freeze
+        video.loop = true;
         video.play().catch(e => { });
     }
 
