@@ -183,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function stopLipSync() {
         if (syncTimeout) clearTimeout(syncTimeout);
-        // Don't reset to idle here immediately, wait for sequence end
+        video.onended = null; // Stop the chain!
     }
 
     function switchVideo(partialPath) {
@@ -197,14 +197,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function playEndSequence() {
-        // Play 'end.webm' once, then go back to idle
+        // STRICT SYNC: Cancel any pending timeouts and force immediate switch
+        if (syncTimeout) clearTimeout(syncTimeout);
+        video.onended = null; // Remove the listener that chains videos
+
         isSpeaking = false;
+
+        // Force immediate switch to end video
+        // We use a slight delay to ensure the browser processes the interruption cleanly
         video.src = ASSETS.video.end;
         video.loop = false;
-        video.play();
+        video.play().catch(e => console.log("End seq play error", e));
 
         video.onended = () => {
-            video.onended = null; // Clear listener
+            video.onended = null;
             resetState();
         };
     }
