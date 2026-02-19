@@ -134,6 +134,7 @@ body {
 }
 
 .music-toggle,
+#music-toggle,
 .control-button {
   display: inline-flex;
   align-items: center;
@@ -149,12 +150,21 @@ body {
 }
 
 .music-toggle img,
+#music-toggle img,
 .control-button img {
   width: 30px;
   height: 30px;
   object-fit: contain;
   filter: drop-shadow(0 0 3px rgba(0, 240, 255, 0.9));
   transition: filter 0.18s ease;
+}
+
+#music-toggle {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 1000;
+  border-radius: 50%;
 }
 
 .music-indicator {
