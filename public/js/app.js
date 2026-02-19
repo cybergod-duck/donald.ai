@@ -196,20 +196,59 @@ document.addEventListener('DOMContentLoaded', () => {
     function playEndSequence() {
         // STRICT SYNC: Cancel any pending timeouts and force immediate switch
         if (syncTimeout) clearTimeout(syncTimeout);
-        video.onended = null; // Remove the listener that chains videos
+        video.onended = null;
 
         isSpeaking = false;
 
         // Force immediate switch to end video
-        // We use a slight delay to ensure the browser processes the interruption cleanly
         video.src = ASSETS.video.end;
         video.loop = false;
         video.play().catch(e => console.log("End seq play error", e));
 
         video.onended = () => {
             video.onended = null;
-            resetState();
+
+            // FADE OUT SEQUENCE
+            video.classList.add('fade-out');
+            fadeAudio(audioDrone, 0, 1000); // Fade out music
+
+            setTimeout(() => {
+                // AFTER FADE (1s): Switch to IDLE and FADE IN
+                video.src = ASSETS.video.idle;
+                video.loop = true;
+                video.play();
+
+                // Wait a moment for video to load/ready, then fade in
+                setTimeout(() => {
+                    video.classList.remove('fade-out');
+                    fadeAudio(audioDrone, 0.15, 1000); // Fade in music back to target volume
+                    resetState(); // Re-enable inputs
+                }, 500);
+            }, 1000);
         };
+    }
+
+    function fadeAudio(audioEl, targetVol, duration) {
+        const step = 20; // ms
+        const steps = duration / step;
+        const currentVol = audioEl.volume;
+        const volStep = (targetVol - currentVol) / steps;
+
+        let counter = 0;
+        const interval = setInterval(() => {
+            counter++;
+            let newVol = audioEl.volume + volStep;
+            // Clamp
+            if (newVol < 0) newVol = 0;
+            if (newVol > 1) newVol = 1;
+
+            audioEl.volume = newVol;
+
+            if (counter >= steps) {
+                clearInterval(interval);
+                audioEl.volume = targetVol; // Ensure exact end
+            }
+        }, step);
     }
 
     // --- UTILS ---
@@ -225,9 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
         input.placeholder = "Type a topic...";
         input.focus();
         status.innerText = "IDLE";
-        video.src = ASSETS.video.idle;
-        video.loop = true;
-        video.play();
+        // Video handling is now done in fade sequence to ensure smoothness
     }
 
     function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
