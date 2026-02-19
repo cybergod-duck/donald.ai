@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const video = document.getElementById('trump-video');
     const input = document.getElementById('cmd');
     const status = document.getElementById('status-overlay');
+    const loadingOverlay = document.getElementById('loading-overlay');
     const audioDrone = document.getElementById('ambient-audio');
 
     // --- STATE ---
@@ -67,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         input.disabled = true;
         setInputStatus("THINKING...");
+        loadingOverlay.classList.remove('hidden'); // Show loading
 
         try {
             // 1. Call API
@@ -80,6 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
 
             // 2. Play Result
+            loadingOverlay.classList.add('hidden'); // Hide loading
+
             if (data.audios && data.audios.length > 0) {
                 await playSpeechSequence(data.audios);
             } else {
@@ -88,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch (e) {
             console.error(e);
+            loadingOverlay.classList.add('hidden');
             setInputStatus("ERROR: " + e.message);
             setTimeout(resetState, 2000);
         }
@@ -106,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Done
-        resetState();
+        playEndSequence();
     }
 
     function playAudioChunk(base64) {
@@ -159,9 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function stopLipSync() {
         if (syncTimeout) clearTimeout(syncTimeout);
-        video.src = ASSETS.video.idle;
-        video.loop = true;
-        video.play();
+        // Don't reset to idle here immediately, wait for sequence end
     }
 
     function switchVideo(partialPath) {
@@ -172,6 +175,19 @@ document.addEventListener('DOMContentLoaded', () => {
         video.src = fullPath;
         video.loop = true;
         video.play().catch(e => { });
+    }
+
+    function playEndSequence() {
+        // Play 'end.webm' once, then go back to idle
+        isSpeaking = false;
+        video.src = ASSETS.video.end;
+        video.loop = false;
+        video.play();
+
+        video.onended = () => {
+            video.onended = null; // Clear listener
+            resetState();
+        };
     }
 
     // --- UTILS ---
@@ -190,9 +206,6 @@ document.addEventListener('DOMContentLoaded', () => {
         video.src = ASSETS.video.idle;
         video.loop = true;
         video.play();
-
-        // Play end video briefly? User didn't strictly ask, but it's nice polish.
-        // Let's stick to strict requirements: "Simple". Idle is safest.
     }
 
     function b64toBlob(b64Data, contentType = '', sliceSize = 512) {
